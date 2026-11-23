@@ -16,4 +16,8 @@ export const ENV = {
   MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB || '10', 10),
   PLATFORM_COMPANY_NAME: process.env.PLATFORM_COMPANY_NAME || 'شركة ميناء للخدمات اللوجستية المحدودة',
   PLATFORM_VAT_NUMBER: process.env.PLATFORM_VAT_NUMBER || '310245678900003',
+  SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
+  SMTP_PORT: parseInt(process.env.SMTP_PORT || '587', 10),
+  SMTP_USER: process.env.SMTP_USER || 'maynaa26.27logistics@gmail.com',
+  SMTP_PASS: process.env.SMTP_PASS || 'uwwklbhfnglwxjar',
 }

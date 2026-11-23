@@ -16,8 +16,9 @@ export const LoginSchema = z.object({
 })
 
 export const VerifyOtpSchema = z.object({
-  phoneOrEmail: z.string().min(3, 'يرجى إدخال البريد الإلكتروني أو رقم الجوال'),
-  otpCode: z.string().length(4, 'رمز التحقق يتكون من 4 أرقام'),
+  email: z.string().optional(),
+  phoneOrEmail: z.string().optional(),
+  otpCode: z.string().min(4).max(6, 'رمز التحقق غير صحيح'),
 })
 
 export const ForgotPasswordSchema = z.object({

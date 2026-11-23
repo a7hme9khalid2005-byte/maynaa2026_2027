@@ -49,6 +49,16 @@ export const authService = {
   isAuthenticated() {
     return !!localStorage.getItem('meynaa_token')
   },
+
+  // إرسال رمز التحقق (OTP) إلى بريد العميل
+  async sendOtp(email, fullName) {
+    return api.post('/auth/send-otp', { email, fullName })
+  },
+
+  // التحقق من رمز الـ OTP
+  async verifyOtp(email, otpCode) {
+    return api.post('/auth/verify-otp', { email, otpCode })
+  },
 }
 
 export default authService

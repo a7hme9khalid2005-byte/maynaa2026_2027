@@ -1,0 +1,255 @@
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://postgres.wprklfjejqbdrsqkwvfp:AHMEDKH2005%24@aws-0-eu-central-1.pooler.supabase.com:5432/postgres"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 1. المستخدمون والمصادقة (Users & Profiles)
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  phone        String   @unique
+  passwordHash String
+  fullName     String
+  role         String   @default("IMPORTER") // SUPER_ADMIN, PROVIDER, IMPORTER, DRIVER
+  status       String   @default("ACTIVE")   // PENDING_VERIFICATION, ACTIVE, SUSPENDED, BLOCKED
+  avatarUrl    String?
+  trialEndsAt  DateTime? // تاريخ انتهاء فترة الـ 3 أيام التجريبية المجانية
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  companyProfile      CompanyProfile?
+  createdRFQs         RFQRequest[]
+  quotes              Quote[]
+  shipmentsAsImporter Shipment[]                @relation("ImporterShipments")
+  shipmentsAsProvider Shipment[]                @relation("ProviderShipments")
+  trucks              Truck[]                   @relation("ProviderTrucks")
+  drivenTrucks        Truck[]                   @relation("DriverTrucks")
+  transfersSent       BankTransferTransaction[] @relation("PayerTransfers")
+  transfersReceived   BankTransferTransaction[] @relation("ProviderReceivedTransfers")
+  reviewedTransfers   BankTransferTransaction[] @relation("AdminOrProviderReviewedTransfers")
+  activityLogs        ActivityLog[]
+}
+
+model CompanyProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyNameAr String
+  companyNameEn String?
+  crNumber      String   // رقم السجل التجاري
+  vatNumber     String?  // الرقم الضريبي
+  bankName      String?  // اسم بنك المزود لصرف مستحقاته
+  ibanNumber    String?  // آيبان المزود
+  isVerified    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+}
+
+// 2. الحسابات البنكية المعتمدة للمنصة (التحويل البنكي الخارجي)
+model PlatformBankAccount {
+  id          String   @id @default(uuid())
+  bankNameAr  String   // مثال: مصرف الراجحي
+  bankNameEn  String?  // Al Rajhi Bank
+  accountName String   // اسم المستفيد الرسمي: شركة ميناء للخدمات اللوجستية
+  ibanNumber  String   @unique
+  accountNum  String
+  swiftCode   String?
+  isActive    Boolean  @default(true)
+  currency    String   @default("SAR")
+  createdAt   DateTime @default(now())
+
+  transfers BankTransferTransaction[]
+}
+
+// 3. أسطول الشاحنات والتتبع المباشر للخريطة (Fleet & Live Telemetry)
+model Truck {
+  id              String    @id @default(uuid())
+  fleetCode       String    @unique // كود الأسطول مثل: SHN-2026-902
+  plateNumber     String    @unique // أ ب ج 1234
+  truckType       String    @default("HEAVY_TRUCK") // REEFER (مبردة), FLATBED (سطحة), CONTAINER_CARRIER
+  status          String    @default("AVAILABLE") // AVAILABLE, ON_DUTY, MAINTENANCE, EMERGENCY
+  providerId      String
+  provider        User      @relation("ProviderTrucks", fields: [providerId], references: [id])
+  driverId        String?
+  driver          User?     @relation("DriverTrucks", fields: [driverId], references: [id])
+  lastLatitude    Float?
+  lastLongitude   Float?
+  lastSpeed       Float?    @default(0.0)
+  lastTemperature Float?    // درجة الحرارة للشاحنات المبردة C°
+  lastTelemetryAt DateTime?
+  createdAt       DateTime  @default(now())
+
+  shipments Shipment[]
+  alerts    FleetAlert[]
+}
+
+model FleetAlert {
+  id          String    @id @default(uuid())
+  truckId     String
+  truck       Truck     @relation(fields: [truckId], references: [id], onDelete: Cascade)
+  alertType   String    // OUT_OF_ROUTE, HIGH_TEMP, OVER_SPEEDING, DELAY, ACCIDENT
+  severity    String    @default("HIGH") // LOW, MEDIUM, HIGH, CRITICAL
+  title       String
+  description String
+  latitude    Float?
+  longitude   Float?
+  isResolved  Boolean   @default(false)
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+// 4. طلبات التسعير وعروض الأسعار (RFQ & Quotations)
+model RFQRequest {
+  id              String   @id @default(uuid())
+  rfqNumber       String   @unique // RFQ-2026-001
+  importerId      String
+  importer        User     @relation(fields: [importerId], references: [id])
+  sector          String   // SEA_FREIGHT, AIR_FREIGHT, LAND_TRANSPORT, CUSTOMS_CLEARANCE
+  originCity      String
+  destinationCity String
+  cargoDetails    String   // JSON stringified details
+  budgetMax       Float?
+  status          String   @default("OPEN") // OPEN, RECEIVING_QUOTES, AWARDED, CANCELLED
+  createdAt       DateTime @default(now())
+
+  quotes Quote[]
+}
+
+model Quote {
+  id          String   @id @default(uuid())
+  rfqId       String
+  rfq         RFQRequest @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  providerId  String
+  provider    User     @relation(fields: [providerId], references: [id])
+  price       Float
+  taxAmount   Float    // 15% ضريبة القيمة المضافة
+  totalAmount Float
+  transitDays Int
+  notes       String?
+  isAccepted  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  shipment Shipment?
+}
+
+// 5. الشحنات والعمليات اللوجستية (Shipments)
+model Shipment {
+  id             String   @id @default(uuid())
+  trackingNumber String   @unique // SHN-2026-884
+  quoteId        String?  @unique
+  quote          Quote?   @relation(fields: [quoteId], references: [id])
+  importerId     String
+  importer       User     @relation("ImporterShipments", fields: [importerId], references: [id])
+  providerId     String
+  provider       User     @relation("ProviderShipments", fields: [providerId], references: [id])
+  truckId        String?
+  truck          Truck?   @relation(fields: [truckId], references: [id])
+  sector         String   // SEA_FREIGHT, AIR_FREIGHT, LAND_TRANSPORT, CUSTOMS_CLEARANCE
+  originName     String
+  destName       String
+  status         String   @default("PENDING_PAYMENT") // PENDING_PAYMENT, READY_FOR_PICKUP, IN_TRANSIT, CUSTOMS_HOLD, DELIVERED, CANCELLED
+  cargoWeight    Float?
+  cargoVolume    Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  invoice   Invoice?
+  documents Document[]
+}
+
+// 6. الفواتير والتحويلات البنكية الخارجية ونظام الضمان (Invoicing & Bank Transfers)
+model Invoice {
+  id                String   @id @default(uuid())
+  invoiceNumber     String   @unique // INV-2026-0042
+  shipmentId        String   @unique
+  shipment          Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  subtotal          Float
+  taxAmount         Float    // 15% ضريبة
+  totalAmount       Float
+  currency          String   @default("USD") // USD, DINAR, EUR
+  isTrialPeriod     Boolean  @default(false)
+  commissionRate    Float    // نسبة عمولة المنصة
+  commissionAmount  Float
+  providerPayoutNet Float    // صافي ربح المزود
+  paymentStatus     String   @default("UNPAID") // UNPAID, PAYMENT_UNDER_REVIEW, ESCROW_HOLD, PAID_TO_PROVIDER, REFUNDED
+  zatcaQrCode       String?  // Base64 TLV QR Code
+  createdAt         DateTime @default(now())
+
+  transfers BankTransferTransaction[]
+}
+
+model BankTransferTransaction {
+  id                  String               @id @default(uuid())
+  invoiceId           String
+  invoice             Invoice              @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  payerId             String
+  payer               User                 @relation("PayerTransfers", fields: [payerId], references: [id])
+  recipientProviderId String?
+  recipientProvider   User?                @relation("ProviderReceivedTransfers", fields: [recipientProviderId], references: [id])
+  platformBankId      String?
+  platformBank        PlatformBankAccount? @relation(fields: [platformBankId], references: [id])
+  recipientBankName   String?              // بنك المزود المحول إليه
+  recipientIban       String?              // آيبان المزود
+  recipientName       String?              // اسم مؤسسة المزود
+  senderBankName      String               // بنك العميل المحول منه
+  senderAccountName   String               // اسم المحول
+  transferRefNumber   String               // رقم العملية / الحوالة
+  currency            String               @default("USD") // USD, DINAR, EUR
+  subtotalAmount      Float?               // سعر الشحن الأساسي
+  isTrialPeriod       Boolean              @default(false) // هل تمت خلال أول 3 أيام مجانية
+  commissionRate      Float                @default(0.025) // نسبة العمولة (0.00 في التجربة أو 0.025 بعدها)
+  commissionAmount    Float                @default(0.0)   // قيمة العمولة
+  transferAmount      Float                // إجمالي المبلغ المحول شاملاً العمولة
+  transferDate        DateTime
+  receiptFileUrl      String               // رابط صورة أو PDF الإيصال
+  status              String               @default("SUBMITTED_TO_ADMIN") // SUBMITTED_TO_ADMIN, APPROVED_BY_ADMIN_PENDING_PROVIDER, CONFIRMED_BY_PROVIDER, REJECTED_BY_ADMIN, REJECTED_BY_PROVIDER
+  rejectionReason     String?
+  adminNotes          String?
+  adminApprovedAt     DateTime?
+  adminReviewedByUserId String?
+  providerConfirmedAt DateTime?
+  reviewedByUserId    String?
+  reviewedByUser      User?                @relation("AdminOrProviderReviewedTransfers", fields: [reviewedByUserId], references: [id])
+  reviewedAt          DateTime?
+  createdAt           DateTime             @default(now())
+}
+
+// 7. المستندات والوثائق الرسمية (Documents)
+model Document {
+  id         String   @id @default(uuid())
+  shipmentId String
+  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  docType    String   // BILL_OF_LADING, CUSTOMS_BAYAN, COMMERCIAL_INVOICE, ORIGIN_CERTIFICATE, DELIVERY_PROOF
+  fileUrl    String
+  fileName   String
+  fileSize   Int?
+  createdAt  DateTime @default(now())
+}
+
+// 8. إعدادات المنصة وسياسات العمولات (Platform Settings & Commissions)
+model PlatformConfig {
+  id               String   @id @default("global-config")
+  commissionSea    Float    @default(2.50) // 2.50%
+  commissionAir    Float    @default(3.00) // 3.00%
+  commissionLand   Float    @default(1.50) // 1.50%
+  commissionCustom Float    @default(1.00) // 1.00%
+  vatPercentage    Float    @default(15.00)// 15.00%
+  termsText        String?
+  privacyText      String?
+  updatedAt        DateTime @updatedAt
+}
+
+// 9. سجل التدقيق والنشاطات (Audit Logs)
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String   // e.g. "APPROVE_BANK_TRANSFER", "CREATE_SHIPMENT", "UPDATE_TRUCK_LOCATION"
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+

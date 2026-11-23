@@ -35,7 +35,7 @@ export default function OtpVerificationPage() {
     if (userEmail && userEmail.includes('@')) {
       authService.sendOtp(userEmail, fullName)
         .then(() => {
-          setStatusMessage(`تم إرسال رمز التحقق إلى بريدك الإلكتروني (${userEmail}) من بريد الموقع الرسمي`)
+          setStatusMessage(`تم إرسال رمز التحقق بنجاح من بريد المنصة (maynaa26.27logistics@gmail.com) إلى بريدك (${userEmail})`)
         })
         .catch(() => {
           setStatusMessage(`أدخل رمز التحقق (أو 12345 للتجربة)`)
@@ -188,6 +188,9 @@ export default function OtpVerificationPage() {
                 <Mail className="w-3.5 h-3.5 text-[#FB8731]" />
                 <span>{userEmail}</span>
               </div>
+              <p className="text-[11px] text-gray-400 mt-2 font-medium">
+                البريد المرسل منه: <span className="text-[#011222] font-sans font-bold" dir="ltr">maynaa26.27logistics@gmail.com</span>
+              </p>
             </div>
 
             {/* OTP Form */}

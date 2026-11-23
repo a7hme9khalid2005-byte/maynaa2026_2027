@@ -115,17 +115,28 @@ export default function RegisterPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    if (!formData.email || !formData.email.includes('@')) {
+      alert('يرجى إدخال بريد إلكتروني صحيح لاستلام رمز التحقق')
+      return
+    }
     if (formData.password && formData.password !== formData.confirmPassword) {
       alert('كلمة المرور وتأكيدها غير متطابقين!')
       return
     }
 
-    // Navigate to OTP verification page, passing accountType and contact info
+    const clientFullName = (
+      formData.firstName
+        ? `${formData.firstName} ${formData.lastName}`.trim()
+        : (formData.entityName || formData.providerName || 'العميل العزيز')
+    )
+
+    // الانتقال لصفحة رمز التحقق مع تمرير إيميل العميل واسمه لاستلام الكود عليه
     navigate('/verify-otp', {
       state: {
         accountType,
-        email: formData.email,
-        phone: formData.phone
+        email: formData.email.trim(),
+        phone: formData.phone,
+        fullName: clientFullName
       }
     })
   }

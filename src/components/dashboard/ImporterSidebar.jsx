@@ -1,4 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
+import authService from '../../services/authService'
 import {
   LayoutGrid,
   Ship,
@@ -20,6 +22,32 @@ const navItems = [
 
 export default function ImporterSidebar({ activePath }) {
   const navigate = useNavigate()
+  const { user: authUser, logout } = useAuth() || {}
+  const currentUser = authUser || authService.getCurrentUser()
+
+  const isDemoSarah = !currentUser || currentUser.email === 'importer@meynaa.com'
+  const displayName = currentUser?.fullName || (isDemoSarah ? 'سارة الزاهرني' : 'العميل العزيز')
+  const displayCompany = currentUser?.companyName || currentUser?.companyProfile?.companyNameAr || (isDemoSarah ? 'مجموعة الريادة للمقاولات' : 'منشأة تجارية معتمدة')
+  const displayRole = isDemoSarah ? 'مديرة سلسلة التوريد' : 'صاحب المنشأة'
+
+  const getInitials = (name) => {
+    if (!name) return 'سز'
+    const parts = name.trim().split(/\s+/).filter(Boolean)
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    }
+    return name.slice(0, 2)
+  }
+  const initials = isDemoSarah ? 'سز' : getInitials(displayName)
+
+  const handleLogout = () => {
+    if (logout) {
+      logout()
+    } else {
+      authService.logout()
+    }
+    navigate('/login')
+  }
 
   return (
     <aside className="w-[320px] shrink-0 h-screen bg-[#011222] flex flex-col fixed right-0 top-0 bottom-0 z-40 shadow-2xl border-l border-white/5 select-none overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -43,9 +71,11 @@ export default function ImporterSidebar({ activePath }) {
       {/* Importer Company Box */}
       <div className="px-6 py-2">
         <div className="bg-[#0E2841] border border-blue-900/30 rounded-2xl p-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#FB8731]"></span>
-            <span className="text-white text-xs font-bold block">مجموعة الريادة للمقاولات</span>
+          <div className="flex items-center gap-2 overflow-hidden">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#FB8731] shrink-0"></span>
+            <span className="text-white text-xs font-bold block truncate max-w-[240px]" title={displayCompany}>
+              {displayCompany}
+            </span>
           </div>
         </div>
       </div>
@@ -112,20 +142,24 @@ export default function ImporterSidebar({ activePath }) {
       {/* User Profile Box */}
       <div className="p-4 mx-6 mb-5 bg-[#0F172A] border border-white/5 rounded-2xl flex items-center justify-between">
         <button
-          onClick={() => navigate('/login')}
+          onClick={handleLogout}
           title="تسجيل الخروج"
-          className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-white/5 transition-colors"
+          className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-white/5 transition-colors cursor-pointer"
         >
           <LogOut className="w-4 h-4" />
         </button>
 
-        <div className="flex items-center gap-3 text-right">
-          <div>
-            <p className="text-white text-sm font-bold truncate">سارة الزاهرني</p>
-            <p className="text-white/60 text-xs mt-0.5">مديرة سلسلة التوريد</p>
+        <div className="flex items-center gap-3 text-right overflow-hidden">
+          <div className="min-w-0">
+            <p className="text-white text-sm font-bold truncate max-w-[150px]" title={displayName}>
+              {displayName}
+            </p>
+            <p className="text-white/60 text-xs mt-0.5 truncate max-w-[150px]">
+              {displayRole}
+            </p>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-[#FB8731] flex items-center justify-center text-white font-black text-base shrink-0 shadow-md">
-            سز
+            {initials}
           </div>
         </div>
       </div>

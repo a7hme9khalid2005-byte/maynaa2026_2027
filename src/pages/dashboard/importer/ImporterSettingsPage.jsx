@@ -2,6 +2,8 @@ import { useState } from 'react'
 import ImporterSidebar from '../../../components/dashboard/ImporterSidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import { useNotifications } from '../../../context/NotificationContext'
+import { useAuth } from '../../../context/AuthContext'
+import authService from '../../../services/authService'
 import {
   Settings as SettingsIcon,
   Search,
@@ -28,55 +30,75 @@ import {
 
 export default function ImporterSettingsPage() {
   const { openNotifications } = useNotifications()
+  const { user: authUser } = useAuth() || {}
+  const currentUser = authUser || authService.getCurrentUser()
+  const isDemoSarah = !currentUser || currentUser.email === 'importer@meynaa.com'
+
   const [activeTab, setActiveTab] = useState('بيانات الشركة')
   const [saved, setSaved] = useState(false)
   const [toastMessage, setToastMessage] = useState(null)
 
   // Company Profile Form Data
-  const [formData, setFormData] = useState({
-    managerName: 'سارة الزاهرني',
-    jobTitle: 'مديرة سلسلة التوريد',
-    companyName: 'مجموعة الريادة للمقاولات',
-    businessSector: 'مواد بناء و مقاولات',
-    email: 'S.zahrani@riyada-group.sa',
-    phone: '+966 55 431 8820',
-    headquarters: 'دبي _ الإمارات العربية المتحدة',
-    annualImport: '4.2M$'
-  })
+  const [formData, setFormData] = useState(() => ({
+    managerName: isDemoSarah ? 'سارة الزاهرني' : (currentUser?.fullName || 'صاحب الحساب'),
+    jobTitle: isDemoSarah ? 'مديرة سلسلة التوريد' : 'صاحب المنشأة والمفوض بالتوقيع',
+    companyName: isDemoSarah ? 'مجموعة الريادة للمقاولات' : (currentUser?.companyName || 'منشأة تجارية'),
+    businessSector: isDemoSarah ? 'مواد بناء و مقاولات' : (currentUser?.businessType || 'أغذية ومشروبات وتجارة'),
+    email: isDemoSarah ? 'S.zahrani@riyada-group.sa' : (currentUser?.email || ''),
+    phone: isDemoSarah ? '+966 55 431 8820' : (currentUser?.phone || ''),
+    headquarters: isDemoSarah ? 'دبي _ الإمارات العربية المتحدة' : (currentUser?.companyAddress || 'غزة - فلسطين'),
+    annualImport: isDemoSarah ? '4.2M$' : '0$'
+  }))
 
   // Saved Addresses
-  const [addresses, setAddresses] = useState([
-    {
-      id: 'ADDR-1',
-      name: 'مستودع الرياض اللوجستي المركزي',
-      type: 'المستودع الرئيسي للتفريغ والتخزين',
-      city: 'الرياض',
-      address: 'حي السلي، مخرج 18، شارع هارون الرشيد',
-      recipient: 'عبدالله السبيعي',
-      phone: '+966 50 123 4567',
-      isDefault: true
-    },
-    {
-      id: 'ADDR-2',
-      name: 'مستودع ميناء جدة الإسلامي',
-      type: 'مستودع تخزين مؤقت وقريب من الميناء',
-      city: 'جدة',
-      address: 'المنطقة الجمركية المساندة 4، طريق الميناء',
-      recipient: 'فيصل الغامدي',
-      phone: '+966 54 876 5432',
-      isDefault: false
-    },
-    {
-      id: 'ADDR-3',
-      name: 'فرع مستودعات الدمام الصناعية',
-      type: 'مركز التوزيع الإقليمي للمنطقة الشرقية',
-      city: 'الدمام',
-      address: 'المدينة الصناعية الثانية، طريق الظهران الجبيل',
-      recipient: 'خالد المطيري',
-      phone: '+966 56 333 9988',
-      isDefault: false
+  const [addresses, setAddresses] = useState(() => {
+    if (isDemoSarah) {
+      return [
+        {
+          id: 'ADDR-1',
+          name: 'مستودع الرياض اللوجستي المركزي',
+          type: 'المستودع الرئيسي للتفريغ والتخزين',
+          city: 'الرياض',
+          address: 'حي السلي، مخرج 18، شارع هارون الرشيد',
+          recipient: 'عبدالله السبيعي',
+          phone: '+966 50 123 4567',
+          isDefault: true
+        },
+        {
+          id: 'ADDR-2',
+          name: 'مستودع ميناء جدة الإسلامي',
+          type: 'مستودع تخزين مؤقت وقريب من الميناء',
+          city: 'جدة',
+          address: 'المنطقة الجمركية المساندة 4، طريق الميناء',
+          recipient: 'فيصل الغامدي',
+          phone: '+966 54 876 5432',
+          isDefault: false
+        },
+        {
+          id: 'ADDR-3',
+          name: 'فرع مستودعات الدمام الصناعية',
+          type: 'مركز التوزيع الإقليمي للمنطقة الشرقية',
+          city: 'الدمام',
+          address: 'المدينة الصناعية الثانية، طريق الظهران الجبيل',
+          recipient: 'خالد المطيري',
+          phone: '+966 56 333 9988',
+          isDefault: false
+        }
+      ]
     }
-  ])
+    return [
+      {
+        id: 'ADDR-1',
+        name: currentUser?.companyName ? `مقر ${currentUser.companyName} الرئيسي` : 'المقر اللوجستي الرئيسي',
+        type: 'المقر الرئيسي ونقطة الاستلام والتوزيع',
+        city: currentUser?.companyAddress || 'المقر الرئيسي',
+        address: currentUser?.companyAddress || 'العنوان المسجل في ملف المنشأة',
+        recipient: currentUser?.fullName || 'صاحب الحساب',
+        phone: currentUser?.phone || '',
+        isDefault: true
+      }
+    ]
+  })
 
   const [showAddressModal, setShowAddressModal] = useState(false)
   const [newAddr, setNewAddr] = useState({
@@ -119,7 +141,19 @@ export default function ImporterSettingsPage() {
   const handleSaveCompany = (e) => {
     e.preventDefault()
     setSaved(true)
-    showToast('تم حفظ بيانات الشركة بنجاح!')
+    if (currentUser) {
+      const updatedUser = {
+        ...currentUser,
+        fullName: formData.managerName,
+        companyName: formData.companyName,
+        companyAddress: formData.headquarters,
+        phone: formData.phone,
+        businessType: formData.businessSector
+      }
+      localStorage.setItem('meynaa_user', JSON.stringify(updatedUser))
+      window.dispatchEvent(new Event('storage'))
+    }
+    showToast('تم حفظ بيانات المنشأة بنجاح!')
     setTimeout(() => setSaved(false), 3000)
   }
 

@@ -138,27 +138,40 @@ export default function OtpVerificationPage() {
         password: location.state?.password || '123456',
         role: accountType === 'provider' ? 'PROVIDER' : 'IMPORTER',
         companyName: location.state?.companyName || (accountType === 'provider' ? 'شركة شحن ونقل' : 'مؤسسة تجارية'),
-        crNumber: location.state?.crNumber || ('1010' + Math.floor(100000 + Math.random() * 900000))
+        crNumber: location.state?.crNumber || ('1010' + Math.floor(100000 + Math.random() * 900000)),
+        companyAddress: location.state?.companyAddress || '',
+        businessType: location.state?.businessType || 'تجارة واستيراد'
       }
 
+      let userToStore = null
       try {
         const regRes = await authService.register(registrationPayload)
         if (regRes?.data?.token?.accessToken) {
           localStorage.setItem('meynaa_token', regRes.data.token.accessToken)
           localStorage.setItem('meynaa_refresh_token', regRes.data.token.refreshToken)
-          localStorage.setItem('meynaa_user', JSON.stringify(regRes.data.user))
+          userToStore = regRes.data.user
         }
       } catch (regErr) {
         console.warn('Registration note:', regErr.message)
-        const fallbackUser = {
-          fullName: registrationPayload.fullName,
-          email: registrationPayload.email,
-          phone: registrationPayload.phone,
-          role: registrationPayload.role,
-          status: 'ACTIVE'
-        }
-        localStorage.setItem('meynaa_user', JSON.stringify(fallbackUser))
       }
+
+      // ضمان حفظ كافة بيانات ملف العميل المسجلة حديثاً في الذاكرة المحلية
+      const activeUserData = {
+        ...(userToStore || {}),
+        fullName: registrationPayload.fullName,
+        email: registrationPayload.email,
+        phone: registrationPayload.phone,
+        role: registrationPayload.role,
+        companyName: registrationPayload.companyName,
+        companyAddress: registrationPayload.companyAddress,
+        crNumber: registrationPayload.crNumber,
+        businessType: registrationPayload.businessType,
+        status: 'ACTIVE'
+      }
+      localStorage.setItem('meynaa_user', JSON.stringify(activeUserData))
+
+      // إشعار التطبيق بتحديث الجلسة
+      window.dispatchEvent(new Event('storage'))
 
       setIsSuccess(true)
       setTimeout(() => {

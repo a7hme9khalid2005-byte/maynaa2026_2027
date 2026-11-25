@@ -2,13 +2,17 @@ import { Link } from 'react-router-dom'
 import ImporterSidebar from '../../../components/dashboard/ImporterSidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import { useNotifications } from '../../../context/NotificationContext'
+import { useAuth } from '../../../context/AuthContext'
+import authService from '../../../services/authService'
 import {
   DollarSign,
   Clock,
   Package,
   Users,
   TrendingUp,
-  Bell
+  Bell,
+  PlusCircle,
+  Sparkles
 } from 'lucide-react'
 import {
   AreaChart,
@@ -33,6 +37,13 @@ const monthlySpendingData = [
 
 export default function ImporterDashboard() {
   const { openNotifications } = useNotifications()
+  const { user: authUser } = useAuth() || {}
+  const currentUser = authUser || authService.getCurrentUser()
+
+  const isDemoSarah = !currentUser || currentUser.email === 'importer@meynaa.com'
+  const displayName = currentUser?.fullName || (isDemoSarah ? 'سارة الزاهرني' : 'العميل العزيز')
+  const displayCompany = currentUser?.companyName || currentUser?.companyProfile?.companyNameAr || (isDemoSarah ? 'مجموعة الريادة للمقاولات' : 'منشأة تجارية معتمدة')
+
   return (
     <div className="flex min-h-screen bg-[#F0F3F8] relative overflow-hidden font-almarai" dir="rtl">
       {/* Decorative Orange Disc at Top-Left Corner (Rectangle 23 in XD) */}
@@ -87,18 +98,28 @@ export default function ImporterDashboard() {
               <div className="pt-1 space-y-1">
                 <span className="text-xs font-bold text-[#FB8731] block">مرحباً بك</span>
                 <div className="text-white font-bold text-base lg:text-lg">
-                  سارة الزاهرني -مجموعة الريادة للمقاولات
+                  {displayName} - {displayCompany}
                 </div>
-                <p className="text-xs text-white/85 flex items-center gap-1.5 flex-wrap">
-                  <span>لديك 5 طلبات عروض أسعار جديدة على طلبك RFQ-2026-441-</span>
-                  <Link to="/importer/rfq" className="font-bold text-[#FB8731] hover:underline">
-                    راجعيها الآن
-                  </Link>
-                </p>
+                {isDemoSarah ? (
+                  <p className="text-xs text-white/85 flex items-center gap-1.5 flex-wrap">
+                    <span>لديك 5 طلبات عروض أسعار جديدة على طلبك RFQ-2026-441-</span>
+                    <Link to="/importer/rfq" className="font-bold text-[#FB8731] hover:underline">
+                      راجعيها الآن
+                    </Link>
+                  </p>
+                ) : (
+                  <p className="text-xs text-white/85 flex items-center gap-1.5 flex-wrap">
+                    <span>أهلاً بك في منصة ميناء! حسابك مفعّل وجاهز لبدء عمليات الاستيراد والشحن الدولي.</span>
+                    <Link to="/importer/rfq" className="font-bold text-[#FB8731] hover:underline inline-flex items-center gap-1">
+                      <span>ابدأ بإنشاء أول طلب تسعير (RFQ) الآن</span>
+                      <span>←</span>
+                    </Link>
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Left Side: Notification Bell & Savings Sub-Card ($94,300) shifted down slightly */}
+            {/* Left Side: Notification Bell & Savings Sub-Card shifted down slightly */}
             <div className="flex items-center gap-4">
               <button
                 onClick={openNotifications}
@@ -110,9 +131,15 @@ export default function ImporterDashboard() {
               </button>
 
               <div className="bg-[#05111D] border border-white/10 rounded-[28px] px-8 py-6 text-white flex flex-col items-center justify-center shrink-0 shadow-2xl min-w-[220px] translate-y-3 lg:translate-y-4">
-                <span className="text-white/70 text-xs font-bold">وفرت هذا العام</span>
-                <span className="text-3xl font-black text-white my-1">$94,300</span>
-                <span className="text-white/60 text-xs font-medium">مقارنة بالأسعار السوقية</span>
+                <span className="text-white/70 text-xs font-bold">
+                  {isDemoSarah ? 'وفرت هذا العام' : 'الرصيد والتوفير'}
+                </span>
+                <span className="text-3xl font-black text-white my-1">
+                  {isDemoSarah ? '$94,300' : '$0'}
+                </span>
+                <span className="text-white/60 text-xs font-medium">
+                  {isDemoSarah ? 'مقارنة بالأسعار السوقية' : 'جاهز للبدء مع ميناء'}
+                </span>
               </div>
             </div>
           </div>
@@ -131,9 +158,13 @@ export default function ImporterDashboard() {
 
             {/* Middle & Bottom Content */}
             <div className="relative z-10">
-              <div className="text-3xl font-black text-[#011222] tracking-tight">$1,284,000</div>
+              <div className="text-3xl font-black text-[#011222] tracking-tight">
+                {isDemoSarah ? '$1,284,000' : '$0'}
+              </div>
               <div className="text-sm font-bold text-[#475569] mt-1">إجمالي الإنفاق</div>
-              <div className="text-xs font-semibold text-[#94A3B8] mt-0.5">منذ 2026</div>
+              <div className="text-xs font-semibold text-[#94A3B8] mt-0.5">
+                {isDemoSarah ? 'منذ 2026' : 'لا يوجد إنفاق بعد'}
+              </div>
             </div>
 
             {/* Decorative Soft Wave at Bottom-Left */}
@@ -158,9 +189,13 @@ export default function ImporterDashboard() {
 
             {/* Middle & Bottom Content */}
             <div className="relative z-10">
-              <div className="text-3xl font-black text-[#011222] tracking-tight">16.4 يوم</div>
+              <div className="text-3xl font-black text-[#011222] tracking-tight">
+                {isDemoSarah ? '16.4 يوم' : '-'}
+              </div>
               <div className="text-sm font-bold text-[#475569] mt-1">متوسط التسليم</div>
-              <div className="text-xs font-semibold text-[#94A3B8] mt-0.5">من الطلب للاستلام</div>
+              <div className="text-xs font-semibold text-[#94A3B8] mt-0.5">
+                {isDemoSarah ? 'من الطلب للاستلام' : 'عند بدء أول شحنة'}
+              </div>
             </div>
 
             {/* Decorative Soft Wave at Bottom-Left */}
@@ -185,9 +220,13 @@ export default function ImporterDashboard() {
 
             {/* Middle & Bottom Content */}
             <div className="relative z-10">
-              <div className="text-3xl font-black text-[#011222] tracking-tight">12</div>
+              <div className="text-3xl font-black text-[#011222] tracking-tight">
+                {isDemoSarah ? '12' : '0'}
+              </div>
               <div className="text-sm font-bold text-[#475569] mt-1">شحنات نشطة</div>
-              <div className="text-xs font-semibold text-[#94A3B8] mt-0.5">قيد التنفيذ حالياً</div>
+              <div className="text-xs font-semibold text-[#94A3B8] mt-0.5">
+                {isDemoSarah ? 'قيد التنفيذ حالياً' : 'ابدأ أول شحنة الآن'}
+              </div>
             </div>
 
             {/* Decorative Soft Wave at Bottom-Left */}
@@ -212,9 +251,13 @@ export default function ImporterDashboard() {
 
             {/* Middle & Bottom Content */}
             <div className="relative z-10">
-              <div className="text-3xl font-black text-[#011222] tracking-tight">8</div>
+              <div className="text-3xl font-black text-[#011222] tracking-tight">
+                {isDemoSarah ? '8' : '+50'}
+              </div>
               <div className="text-sm font-bold text-[#475569] mt-1">شركاء موثوقون</div>
-              <div className="text-xs font-semibold text-[#94A3B8] mt-0.5">مزود خدمة معتمد</div>
+              <div className="text-xs font-semibold text-[#94A3B8] mt-0.5">
+                {isDemoSarah ? 'مزود خدمة معتمد' : 'مزود خدمة جاهزون لخدمتك'}
+              </div>
             </div>
 
             {/* Decorative Soft Wave at Bottom-Left */}
@@ -235,9 +278,9 @@ export default function ImporterDashboard() {
           <div className="bg-white rounded-[24px] p-6 shadow-xs border border-gray-100 flex flex-col justify-between">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              {/* Left Pill: 2026 */}
-              <span className="px-3 py-1 rounded-md bg-[#E8FAF0] text-[#009F65] text-xs font-bold">
-                2026
+              {/* Left Pill */}
+              <span className={`px-3 py-1 rounded-md text-xs font-bold ${isDemoSarah ? 'bg-[#E8FAF0] text-[#009F65]' : 'bg-[#FFF7ED] text-[#FB8731]'}`}>
+                {isDemoSarah ? '2026' : 'حساب جديد'}
               </span>
 
               {/* Right: Title + Orange Trend Icon */}
@@ -249,51 +292,68 @@ export default function ImporterDashboard() {
               </div>
             </div>
 
-            {/* Recharts Area Chart */}
-            <div className="w-full h-[240px] mt-2" dir="ltr">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={monthlySpendingData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="importerOrangeGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#FB8731" stopOpacity={0.25} />
-                      <stop offset="100%" stopColor="#FB8731" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#64748B', fontSize: 12, fontWeight: 500 }}
-                  />
-                  <YAxis
-                    domain={[0, 320]}
-                    ticks={[0, 80, 160, 240, 320]}
-                    tickFormatter={(v) => `$${v}K`}
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
-                  />
-                  <Tooltip
-                    formatter={(val) => [`$${val},000`, 'الإنفاق']}
-                    contentStyle={{
-                      backgroundColor: '#011222',
-                      borderColor: '#011222',
-                      borderRadius: '12px',
-                      color: '#fff',
-                      fontSize: '12px'
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="spending"
-                    stroke="#FB8731"
-                    strokeWidth={3}
-                    fill="url(#importerOrangeGrad)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            {/* Content: Chart for Sarah, Onboarding State for New User */}
+            {isDemoSarah ? (
+              <div className="w-full h-[240px] mt-2" dir="ltr">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={monthlySpendingData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="importerOrangeGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#FB8731" stopOpacity={0.25} />
+                        <stop offset="100%" stopColor="#FB8731" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                    <XAxis
+                      dataKey="month"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748B', fontSize: 12, fontWeight: 500 }}
+                    />
+                    <YAxis
+                      domain={[0, 320]}
+                      ticks={[0, 80, 160, 240, 320]}
+                      tickFormatter={(v) => `$${v}K`}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
+                    />
+                    <Tooltip
+                      formatter={(val) => [`$${val},000`, 'الإنفاق']}
+                      contentStyle={{
+                        backgroundColor: '#011222',
+                        borderColor: '#011222',
+                        borderRadius: '12px',
+                        color: '#fff',
+                        fontSize: '12px'
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="spending"
+                      stroke="#FB8731"
+                      strokeWidth={3}
+                      fill="url(#importerOrangeGrad)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-[240px] flex flex-col items-center justify-center text-center p-6 bg-gray-50/70 rounded-2xl border border-dashed border-gray-200">
+                <div className="w-12 h-12 rounded-2xl bg-[#FFF4EB] flex items-center justify-center text-[#FB8731] mb-3">
+                  <Sparkles className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-bold text-[#011222]">لا توجد حركات إنفاق مسجلة حتى الآن</p>
+                <p className="text-xs text-gray-500 mt-1 max-w-sm">ستظهر إحصائياتك ومخطط الإنفاق الشهري فور ترسية أول طلب تسعير وتأكيد الشحنة.</p>
+                <Link
+                  to="/importer/rfq"
+                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-[#FB8731] text-white text-xs font-bold rounded-xl hover:bg-[#e07220] transition-colors shadow-sm"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>طلب تسعير جديد</span>
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Left Card: مخلص الشحنات (Shipment Summary) */}
@@ -308,7 +368,7 @@ export default function ImporterDashboard() {
               {/* Top-Right: 12 في الطريق (Peach / Light Orange) */}
               <div className="bg-[#FFF3EA] rounded-2xl p-6 flex flex-col items-center justify-center text-center">
                 <span className="text-3xl lg:text-4xl font-black text-[#FB8731] leading-tight">
-                  12
+                  {isDemoSarah ? '12' : '0'}
                 </span>
                 <span className="text-sm font-bold text-[#475569] mt-1">
                   في الطريق
@@ -318,7 +378,7 @@ export default function ImporterDashboard() {
               {/* Top-Left: 3 طلبات مفتوحة (Light Blue) */}
               <div className="bg-[#EBF5FE] rounded-2xl p-6 flex flex-col items-center justify-center text-center">
                 <span className="text-3xl lg:text-4xl font-black text-[#0284C7] leading-tight">
-                  3
+                  {isDemoSarah ? '3' : '0'}
                 </span>
                 <span className="text-sm font-bold text-[#475569] mt-1">
                   طلبات مفتوحة
@@ -328,20 +388,20 @@ export default function ImporterDashboard() {
               {/* Bottom-Right: 97,2% رضا الخدمة (Light Lavender / Purple) */}
               <div className="bg-[#F3ECFD] rounded-2xl p-6 flex flex-col items-center justify-center text-center">
                 <span className="text-3xl lg:text-4xl font-black text-[#8B5CF6] leading-tight">
-                  97,2%
+                  {isDemoSarah ? '97,2%' : '100%'}
                 </span>
                 <span className="text-sm font-bold text-[#475569] mt-1">
-                  رضا الخدمة
+                  {isDemoSarah ? 'رضا الخدمة' : 'جاهزية الحساب'}
                 </span>
               </div>
 
               {/* Bottom-Left: $94,300 واردات 2026 (Light Mint / Green) */}
               <div className="bg-[#E6F9F0] rounded-2xl p-6 flex flex-col items-center justify-center text-center">
                 <span className="text-3xl lg:text-4xl font-black text-[#009F65] leading-tight">
-                  $94,300
+                  {isDemoSarah ? '$94,300' : '$0'}
                 </span>
                 <span className="text-sm font-bold text-[#475569] mt-1">
-                  واردات 2026
+                  {isDemoSarah ? 'واردات 2026' : 'واردات سابقة'}
                 </span>
               </div>
             </div>

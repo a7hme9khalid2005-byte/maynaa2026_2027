@@ -124,11 +124,10 @@ export default function RegisterPage() {
       return
     }
 
-    const clientFullName = (
-      formData.firstName
-        ? `${formData.firstName} ${formData.lastName}`.trim()
-        : (formData.entityName || formData.providerName || 'العميل العزيز')
-    )
+    const parts = [formData.firstName, formData.middleName, formData.lastName].filter(Boolean)
+    const clientFullName = parts.length > 0
+      ? parts.join(' ').trim()
+      : (formData.entityName || formData.providerName || 'العميل العزيز')
 
     const fullPhoneNumber = `${currentCountry.dial}${formData.phone.replace(/^0+/, '')}`
     const companyName = formData.entityName || formData.providerName || ''
@@ -144,7 +143,8 @@ export default function RegisterPage() {
         password: formData.password,
         companyName,
         crNumber,
-        businessType: formData.businessType || formData.serviceType || 'لوجستيات وتجارة'
+        companyAddress: formData.companyAddress || '',
+        businessType: formData.businessType || formData.serviceType || 'تجارة واستيراد'
       }
     })
   }

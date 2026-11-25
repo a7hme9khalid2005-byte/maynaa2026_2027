@@ -1,4 +1,11 @@
+import crypto from 'crypto'
 import nodemailer from 'nodemailer'
+
+const SECRET = 'meynaa_otp_hmac_secret_2026_production'
+
+function createOtpHash(email, code, expiresAt) {
+  return crypto.createHmac('sha256', SECRET).update(`${email}:${code}:${expiresAt}`).digest('hex')
+}
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
@@ -14,7 +21,6 @@ const transporter = nodemailer.createTransport({
   connectionTimeout: 10000,
 })
 
-// Store OTPs in serverless global state
 globalThis._meynaa_otps = globalThis._meynaa_otps || new Map()
 
 export default async function handler(req, res) {
@@ -39,11 +45,13 @@ export default async function handler(req, res) {
     const targetEmail = email.toLowerCase().trim()
     const otpCode = String(Math.floor(10000 + Math.random() * 90000))
     const recipient = fullName || 'عميلنا العزيز'
+    const expiresAt = Date.now() + 10 * 60 * 1000
+    const token = createOtpHash(targetEmail, otpCode, expiresAt)
 
-    // Save OTP for 10 minutes
+    // Save in serverless memory map as well
     globalThis._meynaa_otps.set(targetEmail, {
       code: otpCode,
-      expiresAt: Date.now() + 10 * 60 * 1000,
+      expiresAt,
     })
 
     const htmlContent = `
@@ -110,7 +118,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       message: `تم إرسال رمز التحقق بنجاح من بريد المنصة إلى (${targetEmail})`,
-      data: { email: targetEmail, messageId: info.messageId, code: otpCode }
+      data: { email: targetEmail, messageId: info.messageId, token, expiresAt }
     })
   } catch (error) {
     console.error('[Vercel Serverless] Error sending OTP:', error)

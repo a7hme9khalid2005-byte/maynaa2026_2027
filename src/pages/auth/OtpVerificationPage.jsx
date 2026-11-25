@@ -19,6 +19,7 @@ export default function OtpVerificationPage() {
   const [statusMessage, setStatusMessage] = useState('')
   const [isSuccess, setIsSuccess] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
+  const [tokenMeta, setTokenMeta] = useState({ token: null, expiresAt: null })
 
   const canResend = timer === 0
   const inputRefs = useRef([])
@@ -34,7 +35,10 @@ export default function OtpVerificationPage() {
   useEffect(() => {
     if (userEmail && userEmail.includes('@')) {
       authService.sendOtp(userEmail, fullName)
-        .then(() => {
+        .then((res) => {
+          if (res?.data?.token) {
+            setTokenMeta({ token: res.data.token, expiresAt: res.data.expiresAt })
+          }
           setStatusMessage(`تم إرسال رمز التحقق بنجاح من بريد المنصة (maynaa26.27logistics@gmail.com) إلى بريدك (${userEmail})`)
         })
         .catch(() => {
@@ -106,7 +110,7 @@ export default function OtpVerificationPage() {
 
     try {
       // التحقق من صحة الرمز مع الباك إند
-      await authService.verifyOtp(userEmail, fullCode)
+      await authService.verifyOtp(userEmail, fullCode, tokenMeta.token, tokenMeta.expiresAt)
       setIsSuccess(true)
       setTimeout(() => {
         if (accountType === 'importer') {
@@ -142,7 +146,10 @@ export default function OtpVerificationPage() {
     setErrorMessage('')
     setStatusMessage('جاري إعادة إرسال رمز جديد إلى بريدك...')
     authService.sendOtp(userEmail, fullName)
-      .then(() => {
+      .then((res) => {
+        if (res?.data?.token) {
+          setTokenMeta({ token: res.data.token, expiresAt: res.data.expiresAt })
+        }
         setStatusMessage(`تم إرسال رمز تحقق جديد إلى بريدك الإلكتروني (${userEmail})`)
       })
       .catch(() => {

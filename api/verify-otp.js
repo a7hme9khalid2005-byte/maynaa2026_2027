@@ -1,3 +1,11 @@
+import crypto from 'crypto'
+
+const SECRET = 'meynaa_otp_hmac_secret_2026_production'
+
+function createOtpHash(email, code, expiresAt) {
+  return crypto.createHmac('sha256', SECRET).update(`${email}:${code}:${expiresAt}`).digest('hex')
+}
+
 globalThis._meynaa_otps = globalThis._meynaa_otps || new Map()
 
 export default async function handler(req, res) {
@@ -14,18 +22,41 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { email, phoneOrEmail, otpCode } = req.body || {}
+    const { email, phoneOrEmail, otpCode, token, expiresAt } = req.body || {}
     const targetEmail = (email || phoneOrEmail || '').toLowerCase().trim()
-    const stored = globalThis._meynaa_otps.get(targetEmail)
+    const code = String(otpCode || '').trim()
 
-    if (
-      (stored && stored.code === String(otpCode) && Date.now() < stored.expiresAt) ||
-      otpCode === '12345' ||
-      otpCode === '00000'
-    ) {
-      if (stored) {
-        globalThis._meynaa_otps.delete(targetEmail)
+    // 1. رمز الطوارئ الاحتياطي
+    if (code === '12345' || code === '00000') {
+      return res.status(200).json({
+        success: true,
+        message: 'تم التحقق من الرمز بنجاح وتفعيل الحساب',
+        data: { verified: true }
+      })
+    }
+
+    // 2. التحقق اللامركزي الآمن عبر HMAC Token
+    if (token && expiresAt) {
+      if (Date.now() > Number(expiresAt)) {
+        return res.status(400).json({
+          success: false,
+          message: 'انتهت صلاحية رمز التحقق، يرجى طلب رمز جديد'
+        })
       }
+      const expectedHash = createOtpHash(targetEmail, code, expiresAt)
+      if (expectedHash === token) {
+        return res.status(200).json({
+          success: true,
+          message: 'تم التحقق من الرمز بنجاح وتفعيل الحساب',
+          data: { verified: true }
+        })
+      }
+    }
+
+    // 3. التحقق من الذاكرة المؤقتة (إن وجدت في نفس الـ Instance)
+    const stored = globalThis._meynaa_otps.get(targetEmail)
+    if (stored && stored.code === code && Date.now() < stored.expiresAt) {
+      globalThis._meynaa_otps.delete(targetEmail)
       return res.status(200).json({
         success: true,
         message: 'تم التحقق من الرمز بنجاح وتفعيل الحساب',
@@ -35,7 +66,7 @@ export default async function handler(req, res) {
 
     return res.status(400).json({
       success: false,
-      message: 'رمز التحقق غير صحيح أو انتهت صلاحيته، يرجى المحاولة مرة أخرى'
+      message: 'رمز التحقق غير صحيح، يرجى التأكد من الرمز المرسل إلى بريدك'
     })
   } catch (error) {
     return res.status(500).json({

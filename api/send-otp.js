@@ -18,7 +18,11 @@ const transporter = nodemailer.createTransport({
   tls: {
     rejectUnauthorized: false,
   },
-  connectionTimeout: 10000,
+  pool: true,
+  maxConnections: 3,
+  connectionTimeout: 8000,
+  greetingTimeout: 5000,
+  socketTimeout: 8000,
 })
 
 globalThis._meynaa_otps = globalThis._meynaa_otps || new Map()

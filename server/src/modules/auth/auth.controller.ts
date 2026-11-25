@@ -65,12 +65,8 @@ export class AuthController {
 
       const stored = otpStore.get(targetEmail)
 
-      // التحقق من تطابق الرمز وصلاحيته
-      if (
-        (stored && stored.code === otpCode && Date.now() < stored.expiresAt) ||
-        otpCode === '12345' ||
-        otpCode === '00000'
-      ) {
+      // التحقق الصارم من تطابق الرمز الفعلي وصلاحيته
+      if (stored && stored.code === otpCode && Date.now() < stored.expiresAt) {
         if (stored) {
           otpStore.delete(targetEmail)
         }

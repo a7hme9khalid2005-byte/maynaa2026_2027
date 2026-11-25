@@ -26,16 +26,7 @@ export default async function handler(req, res) {
     const targetEmail = (email || phoneOrEmail || '').toLowerCase().trim()
     const code = String(otpCode || '').trim()
 
-    // 1. رمز الطوارئ الاحتياطي
-    if (code === '12345' || code === '00000') {
-      return res.status(200).json({
-        success: true,
-        message: 'تم التحقق من الرمز بنجاح وتفعيل الحساب',
-        data: { verified: true }
-      })
-    }
-
-    // 2. التحقق اللامركزي الآمن عبر HMAC Token
+    // 1. التحقق الصارم والآمن عبر HMAC Token للرمز المرسل للإيميل فقط
     if (token && expiresAt) {
       if (Date.now() > Number(expiresAt)) {
         return res.status(400).json({

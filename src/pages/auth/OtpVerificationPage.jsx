@@ -14,7 +14,7 @@ import {
 
 export default function OtpVerificationPage() {
   const [otp, setOtp] = useState(['', '', '', '', ''])
-  const [timer, setTimer] = useState(59)
+  const [timer, setTimer] = useState(20)
   const [errorMessage, setErrorMessage] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const [isSuccess, setIsSuccess] = useState(false)
@@ -39,10 +39,10 @@ export default function OtpVerificationPage() {
           if (res?.data?.token) {
             setTokenMeta({ token: res.data.token, expiresAt: res.data.expiresAt })
           }
-          setStatusMessage(`تم إرسال رمز التحقق بنجاح من بريد المنصة (maynaa26.27logistics@gmail.com) إلى بريدك (${userEmail})`)
+          setStatusMessage(`تم إرسال رمز التحقق بنجاح من بريد المنصة (maynaa26.27logistics@gmail.com) إلى بريدك (${userEmail}) - يصلك خلال 20 ثانية`)
         })
         .catch(() => {
-          setStatusMessage(`أدخل رمز التحقق (أو 12345 للتجربة)`)
+          setStatusMessage(`يرجى مراجعة بريدك الإلكتروني والرسائل غير المرغوب فيها (Spam)`)
         })
     }
   }, [userEmail, fullName])
@@ -109,7 +109,7 @@ export default function OtpVerificationPage() {
     setErrorMessage('')
 
     try {
-      // التحقق من صحة الرمز مع الباك إند
+      // التحقق الصارم من صحة الرمز الفعلي فقط
       await authService.verifyOtp(userEmail, fullCode, tokenMeta.token, tokenMeta.expiresAt)
       setIsSuccess(true)
       setTimeout(() => {
@@ -120,19 +120,7 @@ export default function OtpVerificationPage() {
         }
       }, 1200)
     } catch {
-      // دعم الكود التجريبي الافتراضي للطوارئ 12345
-      if (fullCode === '12345' || fullCode === '00000') {
-        setIsSuccess(true)
-        setTimeout(() => {
-          if (accountType === 'importer') {
-            navigate('/importer')
-          } else {
-            navigate('/dashboard')
-          }
-        }, 1200)
-        return
-      }
-      setErrorMessage('رمز التحقق غير صحيح أو انتهت صلاحيته. يرجى مراجعة بريدك.')
+      setErrorMessage('رمز التحقق غير صحيح أو انتهت صلاحيته. يرجى التأكد من الرمز المرسل إلى بريدك.')
     } finally {
       setIsVerifying(false)
     }
@@ -142,7 +130,7 @@ export default function OtpVerificationPage() {
   const handleResend = () => {
     if (!canResend) return
     setOtp(['', '', '', '', ''])
-    setTimer(59)
+    setTimer(20)
     setErrorMessage('')
     setStatusMessage('جاري إعادة إرسال رمز جديد إلى بريدك...')
     authService.sendOtp(userEmail, fullName)
@@ -153,7 +141,7 @@ export default function OtpVerificationPage() {
         setStatusMessage(`تم إرسال رمز تحقق جديد إلى بريدك الإلكتروني (${userEmail})`)
       })
       .catch(() => {
-        setStatusMessage(`أدخل رمز التحقق (أو 12345 للتجربة)`)
+        setStatusMessage(`يرجى مراجعة بريدك الإلكتروني والرسائل غير المرغوب فيها (Spam)`)
       })
     inputRefs.current[0]?.focus()
   }

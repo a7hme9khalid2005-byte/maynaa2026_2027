@@ -4,7 +4,7 @@
   "description": "Backend API and Real-Time WebSocket Engine for Meynaa Logistics Platform",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "prisma:generate": "prisma generate",

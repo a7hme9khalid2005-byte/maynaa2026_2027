@@ -20,4 +20,5 @@ export const ENV = {
   SMTP_PORT: parseInt(process.env.SMTP_PORT || '587', 10),
   SMTP_USER: process.env.SMTP_USER || 'maynaa26.27logistics@gmail.com',
   SMTP_PASS: process.env.SMTP_PASS || 'uwwklbhfnglwxjar',
+  RESEND_API_KEY: process.env.RESEND_API_KEY || '',
 }

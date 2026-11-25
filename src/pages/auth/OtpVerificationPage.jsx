@@ -19,7 +19,6 @@ export default function OtpVerificationPage() {
   const [statusMessage, setStatusMessage] = useState('')
   const [isSuccess, setIsSuccess] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
-  const [tokenMeta, setTokenMeta] = useState({ token: null, expiresAt: null })
 
   const canResend = timer === 0
   const inputRefs = useRef([])
@@ -31,13 +30,24 @@ export default function OtpVerificationPage() {
   const userEmail = location.state?.email || 'a7hme9khalid2005@gmail.com'
   const fullName = location.state?.fullName || 'العميل'
 
+  const [tokenMeta, setTokenMeta] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(`meynaa_otp_${userEmail}`)
+      return saved ? JSON.parse(saved) : { token: null, expiresAt: null }
+    } catch {
+      return { token: null, expiresAt: null }
+    }
+  })
+
   // إرسال رمز التحقق الفعلي عبر الإيميل فور فتح الصفحة
   useEffect(() => {
     if (userEmail && userEmail.includes('@')) {
       authService.sendOtp(userEmail, fullName)
         .then((res) => {
           if (res?.data?.token) {
-            setTokenMeta({ token: res.data.token, expiresAt: res.data.expiresAt })
+            const meta = { token: res.data.token, expiresAt: res.data.expiresAt }
+            setTokenMeta(meta)
+            sessionStorage.setItem(`meynaa_otp_${userEmail}`, JSON.stringify(meta))
           }
           setStatusMessage(`تم إرسال رمز التحقق بنجاح من بريد المنصة (maynaa26.27logistics@gmail.com) إلى بريدك (${userEmail}) - يصلك خلال 20 ثانية`)
         })
@@ -109,8 +119,16 @@ export default function OtpVerificationPage() {
     setErrorMessage('')
 
     try {
-      // 1. التحقق الصارم من صحة الرمز الفعلي فقط
-      await authService.verifyOtp(userEmail, fullCode, tokenMeta.token, tokenMeta.expiresAt)
+      // 1. التحقق الصارم والنهائي من صحة الرمز الفعلي فقط
+      const verifyRes = await authService.verifyOtp(userEmail, fullCode, tokenMeta.token, tokenMeta.expiresAt)
+      if (!verifyRes || verifyRes.success !== true) {
+        throw new Error(verifyRes?.message || 'رمز التحقق غير صحيح، يرجى إدخال الرمز الصحيح المرسل إلى بريدك')
+      }
+
+      // مسح التوكن المؤقت بعد النجاح
+      try {
+        sessionStorage.removeItem(`meynaa_otp_${userEmail}`)
+      } catch {}
 
       // 2. إنشاء وتخزين الحساب الجديد في قاعدة بيانات Supabase PostgreSQL
       const registrationPayload = {
@@ -150,8 +168,8 @@ export default function OtpVerificationPage() {
           navigate('/dashboard')
         }
       }, 1200)
-    } catch {
-      setErrorMessage('رمز التحقق غير صحيح أو انتهت صلاحيته. يرجى التأكد من الرمز المرسل إلى بريدك.')
+    } catch (err) {
+      setErrorMessage(err.message || 'رمز التحقق غير صحيح أو انتهت صلاحيته. يرجى التأكد من الرمز المرسل إلى بريدك.')
     } finally {
       setIsVerifying(false)
     }
@@ -167,12 +185,14 @@ export default function OtpVerificationPage() {
     authService.sendOtp(userEmail, fullName)
       .then((res) => {
         if (res?.data?.token) {
-          setTokenMeta({ token: res.data.token, expiresAt: res.data.expiresAt })
+          const meta = { token: res.data.token, expiresAt: res.data.expiresAt }
+          setTokenMeta(meta)
+          sessionStorage.setItem(`meynaa_otp_${userEmail}`, JSON.stringify(meta))
         }
         setStatusMessage(`تم إرسال رمز تحقق جديد إلى بريدك الإلكتروني (${userEmail})`)
       })
-      .catch(() => {
-        setStatusMessage(`يرجى مراجعة بريدك الإلكتروني والرسائل غير المرغوب فيها (Spam)`)
+      .catch((err) => {
+        setErrorMessage(err.message || 'فشل إرسال رمز التحقق')
       })
     inputRefs.current[0]?.focus()
   }

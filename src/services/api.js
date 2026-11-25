@@ -1,5 +1,5 @@
 // محرك الربط والاتصال بالواجهة الخلفية (Backend API Client)
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://meynaa-backend.onrender.com/api/v1'
+const BASE_URL = '/api/v1'
 
 class ApiClient {
   constructor(baseUrl) {

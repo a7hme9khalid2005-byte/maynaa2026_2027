@@ -4,6 +4,22 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/v1/auth/send-otp",
+      "destination": "/api/send-otp"
+    },
+    {
+      "source": "/api/v1/auth/verify-otp",
+      "destination": "/api/verify-otp"
+    },
+    {
+      "source": "/api/send-otp",
+      "destination": "/api/send-otp"
+    },
+    {
+      "source": "/api/verify-otp",
+      "destination": "/api/verify-otp"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "https://meynaa-backend.onrender.com/api/$1"
     },

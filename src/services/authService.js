@@ -52,12 +52,28 @@ export const authService = {
 
   // إرسال رمز التحقق (OTP) إلى بريد العميل
   async sendOtp(email, fullName) {
-    return api.post('/auth/send-otp', { email, fullName })
+    try {
+      return await api.post('/auth/send-otp', { email, fullName })
+    } catch {
+      return await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, fullName }),
+      }).then((r) => r.json())
+    }
   },
 
   // التحقق من رمز الـ OTP
   async verifyOtp(email, otpCode) {
-    return api.post('/auth/verify-otp', { email, otpCode })
+    try {
+      return await api.post('/auth/verify-otp', { email, otpCode })
+    } catch {
+      return await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otpCode }),
+      }).then((r) => r.json())
+    }
   },
 }
 

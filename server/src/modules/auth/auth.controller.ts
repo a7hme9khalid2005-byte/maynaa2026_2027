@@ -19,8 +19,9 @@ export class AuthController {
 
   static async login(req: Request, res: Response) {
     try {
-      const { usernameOrEmail, password } = req.body
-      const result = await AuthService.login(usernameOrEmail, password)
+      const { usernameOrEmail, email, password } = req.body
+      const targetUser = (usernameOrEmail || email || '').trim()
+      const result = await AuthService.login(targetUser, password)
       return sendSuccess(res, result, 'تم تسجيل الدخول بنجاح')
     } catch (err: any) {
       return sendError(res, err.message || 'فشل تسجيل الدخول', 401)

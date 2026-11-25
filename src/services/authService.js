@@ -3,11 +3,14 @@ import api from './api.js'
 export const authService = {
   // تسجيل الدخول
   async login(email, password) {
-    const res = await api.post('/auth/login', { email, password })
-    if (res?.data?.accessToken) {
-      localStorage.setItem('meynaa_token', res.data.accessToken)
-      localStorage.setItem('meynaa_refresh_token', res.data.refreshToken)
-      localStorage.setItem('meynaa_user', JSON.stringify(res.data.user))
+    const res = await api.post('/auth/login', { usernameOrEmail: email, email, password })
+    const token = res?.data?.accessToken || res?.data?.token?.accessToken
+    const refreshToken = res?.data?.refreshToken || res?.data?.token?.refreshToken
+    const user = res?.data?.user
+    if (token) {
+      localStorage.setItem('meynaa_token', token)
+      if (refreshToken) localStorage.setItem('meynaa_refresh_token', refreshToken)
+      if (user) localStorage.setItem('meynaa_user', JSON.stringify(user))
     }
     return res
   },
@@ -15,10 +18,13 @@ export const authService = {
   // إنشاء حساب جديد
   async register(data) {
     const res = await api.post('/auth/register', data)
-    if (res?.data?.accessToken) {
-      localStorage.setItem('meynaa_token', res.data.accessToken)
-      localStorage.setItem('meynaa_refresh_token', res.data.refreshToken)
-      localStorage.setItem('meynaa_user', JSON.stringify(res.data.user))
+    const token = res?.data?.accessToken || res?.data?.token?.accessToken
+    const refreshToken = res?.data?.refreshToken || res?.data?.token?.refreshToken
+    const user = res?.data?.user
+    if (token) {
+      localStorage.setItem('meynaa_token', token)
+      if (refreshToken) localStorage.setItem('meynaa_refresh_token', refreshToken)
+      if (user) localStorage.setItem('meynaa_user', JSON.stringify(user))
     }
     return res
   },

@@ -130,13 +130,21 @@ export default function RegisterPage() {
         : (formData.entityName || formData.providerName || 'العميل العزيز')
     )
 
-    // الانتقال لصفحة رمز التحقق مع تمرير إيميل العميل واسمه لاستلام الكود عليه
+    const fullPhoneNumber = `${currentCountry.dial}${formData.phone.replace(/^0+/, '')}`
+    const companyName = formData.entityName || formData.providerName || ''
+    const crNumber = formData.taxOrCrNumber || ''
+
+    // الانتقال لصفحة رمز التحقق مع تمرير كافة بيانات الحساب الجديد ليتم حفظه بعد تأكيد الرمز
     navigate('/verify-otp', {
       state: {
         accountType,
         email: formData.email.trim(),
-        phone: formData.phone,
-        fullName: clientFullName
+        phone: fullPhoneNumber,
+        fullName: clientFullName,
+        password: formData.password,
+        companyName,
+        crNumber,
+        businessType: formData.businessType || formData.serviceType || 'لوجستيات وتجارة'
       }
     })
   }

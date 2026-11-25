@@ -2,6 +2,8 @@ import { useState } from 'react'
 import Sidebar from '../../../components/dashboard/Sidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import { useNotifications } from '../../../context/NotificationContext'
+import { useAuth } from '../../../context/AuthContext'
+import authService from '../../../services/authService'
 import {
   Search,
   Bell,
@@ -28,6 +30,10 @@ import {
 
 export default function SettingsPage() {
   const { openNotifications } = useNotifications()
+  const { user: authUser } = useAuth() || {}
+  const currentUser = authUser || authService.getCurrentUser()
+  const isDemoProvider = !currentUser || currentUser.email === 'provider@meynaa.com'
+
   const [activeTab, setActiveTab] = useState('بيانات الشركة')
   const [toastMessage, setToastMessage] = useState(null)
 
@@ -37,16 +43,16 @@ export default function SettingsPage() {
   }
 
   // Tab 1: Company Profile Form Data
-  const [formData, setFormData] = useState({
-    companyName: 'شركة الأفق للشحن الدولي',
-    managerName: 'خالد العمري',
-    email: 'k.omari@ufo-shipping.ae',
-    phone: '+971 50 887 3421',
-    headquarters: 'دبي _ الإمارات العربية المتحدة',
-    licenseNumber: 'TR-2021-88432',
-    taxNumber: 'TAX-994821039',
-    establishedYear: '2016'
-  })
+  const [formData, setFormData] = useState(() => ({
+    companyName: isDemoProvider ? 'شركة الأفق للشحن الدولي' : (currentUser?.companyName || 'شركة شحن ونقل'),
+    managerName: isDemoProvider ? 'خالد العمري' : (currentUser?.fullName || 'المفوض العام'),
+    email: isDemoProvider ? 'k.omari@ufo-shipping.ae' : (currentUser?.email || ''),
+    phone: isDemoProvider ? '+971 50 887 3421' : (currentUser?.phone || ''),
+    headquarters: isDemoProvider ? 'دبي _ الإمارات العربية المتحدة' : (currentUser?.companyAddress || 'المقر الرئيسي'),
+    licenseNumber: isDemoProvider ? 'TR-2021-88432' : (currentUser?.crNumber || 'CR-2026-001'),
+    taxNumber: isDemoProvider ? 'TAX-994821039' : 'TAX-2026',
+    establishedYear: isDemoProvider ? '2016' : '2026'
+  }))
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -54,6 +60,18 @@ export default function SettingsPage() {
 
   const handleSaveCompany = (e) => {
     e.preventDefault()
+    if (currentUser) {
+      const updatedUser = {
+        ...currentUser,
+        fullName: formData.managerName,
+        companyName: formData.companyName,
+        companyAddress: formData.headquarters,
+        phone: formData.phone,
+        crNumber: formData.licenseNumber
+      }
+      localStorage.setItem('meynaa_user', JSON.stringify(updatedUser))
+      window.dispatchEvent(new Event('storage'))
+    }
     showToast('تم حفظ وتحديث بيانات الشركة بنجاح!')
   }
 
@@ -313,13 +331,13 @@ export default function SettingsPage() {
 
             <div>
               <h2 className="text-xl font-black text-white">
-                شركة الأفق للشحن الدولي
+                {formData.companyName}
               </h2>
               <p className="text-xs text-white/80 font-medium mt-1">
-                خالد العمري -مدير عام
+                {formData.managerName} - {isDemoProvider ? 'مدير عام' : 'المفوض بالتوقيع'}
               </p>
               <p className="text-xs text-white/60 font-mono mt-0.5">
-                k.omari@ufo-shipping.ae
+                {formData.email}
               </p>
             </div>
           </div>

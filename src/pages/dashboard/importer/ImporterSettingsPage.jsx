@@ -303,9 +303,9 @@ export default function ImporterSettingsPage() {
 
           {/* Right: User Avatar & Info (Avatar on Right, Text on Left) */}
           <div className="flex items-center gap-4 relative z-10 text-right">
-            {/* Orange Square Avatar with 'سار' */}
+            {/* Orange Square Avatar */}
             <div className="w-14 h-14 rounded-2xl bg-[#FB8731] flex items-center justify-center text-white font-black text-xl shadow-md shrink-0">
-              سار
+              {isDemoSarah ? 'سار' : (formData.managerName.trim().slice(0, 2))}
             </div>
 
             <div>
@@ -313,10 +313,10 @@ export default function ImporterSettingsPage() {
                 {formData.managerName}
               </h2>
               <span className="text-white/75 text-xs font-bold block mt-0.5">
-                {formData.jobTitle} -{formData.companyName}
+                {formData.jobTitle} - {formData.companyName}
               </span>
               <span className="text-white/50 text-[11px] font-sans block mt-0.5">
-                s.zahrani@riyada-group.sa
+                {formData.email}
               </span>
             </div>
           </div>

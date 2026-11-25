@@ -4,6 +4,8 @@ import DashboardHeader from '../../../components/dashboard/DashboardHeader'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import DocumentPreviewModal from '../../../components/modals/DocumentPreviewModal'
 import { downloadShippingDocument } from '../../../utils/documentDownloader'
+import { useAuth } from '../../../context/AuthContext'
+import authService from '../../../services/authService'
 import {
   FileText,
   Upload,
@@ -14,7 +16,8 @@ import {
   Eye,
   Search,
   X,
-  AlertCircle
+  AlertCircle,
+  Plus
 } from 'lucide-react'
 
 const initialDocs = [
@@ -81,9 +84,13 @@ const initialDocs = [
 ]
 
 export default function DocumentsPage() {
+  const { user: authUser } = useAuth() || {}
+  const currentUser = authUser || authService.getCurrentUser()
+  const isDemoProvider = !currentUser || currentUser.email === 'provider@meynaa.com'
+
   const [activeTab, setActiveTab] = useState('الكل')
   const [searchTerm, setSearchTerm] = useState('')
-  const [docsList, setDocsList] = useState(initialDocs)
+  const [docsList, setDocsList] = useState(() => (isDemoProvider ? initialDocs : []))
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [toastMessage, setToastMessage] = useState(null)
 
@@ -465,6 +472,25 @@ export default function DocumentsPage() {
                     ))}
                   </tbody>
                 </table>
+
+                {filteredDocs.length === 0 && (
+                  <div className="text-center py-12 flex flex-col items-center justify-center">
+                    <div className="w-12 h-12 rounded-2xl bg-[#EBF5FE] text-[#0284C7] flex items-center justify-center mb-3">
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    <p className="text-sm font-bold text-[#011222]">لا توجد مستندات مسجلة بعد</p>
+                    <p className="text-xs text-gray-500 mt-1 max-w-sm">
+                      يمكنك رفع التراخيص اللوجستية، بوالص الشحن، أو الشهادات الرسمية لتسهيل إجراءات الشحنات.
+                    </p>
+                    <button
+                      onClick={() => setShowUploadModal(true)}
+                      className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-[#FB8731] text-white text-xs font-bold rounded-xl hover:bg-[#e07220] transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>رفع أول مستند الآن</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </main>

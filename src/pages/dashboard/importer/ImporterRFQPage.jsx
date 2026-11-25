@@ -2,6 +2,8 @@ import { useState } from 'react'
 import ImporterSidebar from '../../../components/dashboard/ImporterSidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import { useNotifications } from '../../../context/NotificationContext'
+import { useAuth } from '../../../context/AuthContext'
+import authService from '../../../services/authService'
 import {
   FileText,
   Search,
@@ -105,9 +107,24 @@ const allRfqs = [
 
 export default function ImporterRFQPage() {
   const { openNotifications } = useNotifications()
+  const { user: authUser } = useAuth() || {}
+  const currentUser = authUser || authService.getCurrentUser()
+  const isDemoSarah = !currentUser || currentUser.email === 'importer@meynaa.com'
+
   const [activeTab, setActiveTab] = useState('الكل')
-  const [selectedRfqId, setSelectedRfqId] = useState('RFQ-2026-441')
-  const [rfqList, setRfqList] = useState(allRfqs)
+  const [rfqList, setRfqList] = useState(() => {
+    if (isDemoSarah) return allRfqs
+    try {
+      const stored = localStorage.getItem(`meynaa_rfqs_${currentUser?.email || 'new'}`)
+      return stored ? JSON.parse(stored) : []
+    } catch {
+      return []
+    }
+  })
+  const [selectedRfqId, setSelectedRfqId] = useState(() => {
+    if (isDemoSarah) return 'RFQ-2026-441'
+    return null
+  })
   const [searchTerm, setSearchTerm] = useState('')
   const [actionNotice, setActionNotice] = useState(null)
   const [showNewModal, setShowNewModal] = useState(false)
@@ -131,7 +148,7 @@ export default function ImporterRFQPage() {
     return true
   })
 
-  const selectedRfq = rfqList.find((r) => r.id === selectedRfqId) || rfqList[0]
+  const selectedRfq = rfqList.find((r) => r.id === selectedRfqId) || rfqList[0] || null
 
   const handleAcceptBid = (bid) => {
     // 1. Update the bid status in rfqList
@@ -209,14 +226,24 @@ export default function ImporterRFQPage() {
       statusColor: '#0284C7',
       bids: []
     }
-    setRfqList([newRfq, ...rfqList])
+    const updatedList = [newRfq, ...rfqList]
+    setRfqList(updatedList)
     setSelectedRfqId(newRfq.id)
+    if (!isDemoSarah && currentUser?.email) {
+      try {
+        localStorage.setItem(`meynaa_rfqs_${currentUser.email}`, JSON.stringify(updatedList))
+      } catch {}
+    }
     setShowNewModal(false)
     setNewTitle('')
     setNewOrigin('')
     setNewDest('')
-    setActionNotice('تم نشر طلب عرض السعر بنجاح!')
-    setTimeout(() => setActionNotice(null), 3500)
+    setActionNotice({
+      type: 'accepted',
+      title: 'تم نشر طلب عرض السعر بنجاح!',
+      subtitle: `طلبك "${newRfq.title}" متاح الآن لمزودي الخدمة لتقديم عروضهم.`
+    })
+    setTimeout(() => setActionNotice(null), 4500)
   }
 
   return (
@@ -326,7 +353,9 @@ export default function ImporterRFQPage() {
           {/* Right: Section Title & Active RFQ Count */}
           <div className="text-right">
             <h2 className="text-xl lg:text-2xl font-black text-[#011222]">طلبات عروض الأسعار (RFQ)</h2>
-            <span className="text-xs text-gray-400 font-bold block mt-0.5">2 طلب نشط</span>
+            <span className="text-xs text-gray-400 font-bold block mt-0.5">
+              {filteredRfqs.filter((r) => r.status !== 'مكتمل').length} طلب نشط
+            </span>
           </div>
 
           {/* Center: Filter Tabs Pill */}
@@ -352,15 +381,34 @@ export default function ImporterRFQPage() {
           {/* Left: + طلب جديد Button */}
           <button
             onClick={() => setShowNewModal(true)}
-            className="w-full md:w-auto bg-[#FB8731] hover:bg-[#E06F1B] text-white font-bold text-sm px-7 py-2.5 rounded-2xl shadow-sm transition-all duration-200 flex items-center justify-center gap-1.5"
+            className="w-full md:w-auto bg-[#FB8731] hover:bg-[#E06F1B] text-white font-bold text-sm px-7 py-2.5 rounded-2xl shadow-sm transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <span>طلب جديد</span>
             <Plus className="w-4 h-4 stroke-[3]" />
           </button>
         </section>
 
-        {/* Two Columns Grid matching screenshot */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Content: Empty State when no RFQs exist, or 2-column view when RFQs exist */}
+        {filteredRfqs.length === 0 ? (
+          <div className="bg-white rounded-[24px] p-12 text-center border border-gray-100 shadow-xs flex flex-col items-center justify-center my-6">
+            <div className="w-16 h-16 rounded-2xl bg-[#FFF4EB] flex items-center justify-center text-[#FB8731] mb-4 shadow-sm">
+              <FileText className="w-8 h-8" />
+            </div>
+            <h3 className="text-lg font-black text-[#011222]">لا توجد طلبات عروض أسعار حتى الآن</h3>
+            <p className="text-xs text-gray-500 mt-1 max-w-md leading-relaxed">
+              ابدأ بإنشاء أول طلب تسعير لبضاعتك أو شحنتك، وستصلك عروض أسعار تفصيلية من أفضل شركات ومزودي خدمات الشحن المعتمدين في المنصة.
+            </p>
+            <button
+              onClick={() => setShowNewModal(true)}
+              className="mt-5 inline-flex items-center gap-2 bg-[#FB8731] hover:bg-[#e07220] text-white text-xs font-bold px-6 py-2.5 rounded-xl shadow-sm transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>إنشاء طلب تسعير (RFQ) الآن</span>
+            </button>
+          </div>
+        ) : (
+          /* Two Columns Grid matching screenshot */
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column (Col 1-7): Selected RFQ Specs & Incoming Offers */}
           <div className="lg:col-span-7 space-y-6">
             {selectedRfq && (
@@ -565,6 +613,7 @@ export default function ImporterRFQPage() {
             })}
           </div>
         </section>
+        )}
 
         {/* Floating Moving Footer Bar */}
         <DashboardFooterBar />

@@ -4,6 +4,8 @@ import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import DocumentPreviewModal from '../../../components/modals/DocumentPreviewModal'
 import { downloadShippingDocument } from '../../../utils/documentDownloader'
 import { useNotifications } from '../../../context/NotificationContext'
+import { useAuth } from '../../../context/AuthContext'
+import authService from '../../../services/authService'
 import {
   FileText,
   Search,
@@ -19,7 +21,8 @@ import {
   Package,
   X,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Plus
 } from 'lucide-react'
 
 const initialDocs = [
@@ -107,10 +110,22 @@ const initialDocs = [
 
 export default function ImporterDocumentsPage() {
   const { openNotifications } = useNotifications()
+  const { user: authUser } = useAuth() || {}
+  const currentUser = authUser || authService.getCurrentUser()
+  const isDemoSarah = !currentUser || currentUser.email === 'importer@meynaa.com'
+
   const [searchTerm, setSearchTerm] = useState('')
   const fileInputRef = useRef(null)
   const [activeTab, setActiveTab] = useState('الكل')
-  const [docsList, setDocsList] = useState(initialDocs)
+  const [docsList, setDocsList] = useState(() => {
+    if (isDemoSarah) return initialDocs
+    try {
+      const stored = localStorage.getItem(`meynaa_docs_${currentUser?.email || 'new'}`)
+      return stored ? JSON.parse(stored) : []
+    } catch {
+      return []
+    }
+  })
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [newDocName, setNewDocName] = useState('')
   const [newDocShipment, setNewDocShipment] = useState('SHN-2026-884')
@@ -203,7 +218,13 @@ export default function ImporterDocumentsPage() {
       hasActions: true
     }
 
-    setDocsList([newDoc, ...docsList])
+    const updated = [newDoc, ...docsList]
+    setDocsList(updated)
+    if (!isDemoSarah && currentUser?.email) {
+      try {
+        localStorage.setItem(`meynaa_docs_${currentUser.email}`, JSON.stringify(updated))
+      } catch {}
+    }
     setShowUploadModal(false)
     setNewDocName('')
     setNewDocRef('')
@@ -512,8 +533,21 @@ export default function ImporterDocumentsPage() {
             </table>
 
             {filteredDocs.length === 0 && (
-              <div className="text-center py-10 text-gray-400 text-xs font-bold">
-                لا توجد مستندات تطابق هذا التصنيف حالياً.
+              <div className="text-center py-12 flex flex-col items-center justify-center">
+                <div className="w-12 h-12 rounded-2xl bg-[#EBF5FE] text-[#0284C7] flex items-center justify-center mb-3">
+                  <FileText className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-bold text-[#011222]">لا توجد مستندات مسجلة بعد</p>
+                <p className="text-xs text-gray-500 mt-1 max-w-sm">
+                  يمكنك رفع وثائق السجل التجاري، بوالص الشحن، أو الفواتير التجارية لحفظها ومشاركتها مع المخلصين الجمركيين.
+                </p>
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-[#0284C7] text-white text-xs font-bold rounded-xl hover:bg-[#0369A1] transition-colors cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>رفع أول مستند الآن</span>
+                </button>
               </div>
             )}
           </div>

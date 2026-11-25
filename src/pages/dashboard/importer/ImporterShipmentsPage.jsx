@@ -1,8 +1,11 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import ImporterSidebar from '../../../components/dashboard/ImporterSidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import TruckTrackingMap from '../../../components/dashboard/TruckTrackingMap'
 import { useNotifications } from '../../../context/NotificationContext'
+import { useAuth } from '../../../context/AuthContext'
+import authService from '../../../services/authService'
 import {
   Ship,
   Search,
@@ -10,7 +13,8 @@ import {
   MapPin,
   ChevronDown,
   Truck,
-  LayoutGrid
+  LayoutGrid,
+  Plus
 } from 'lucide-react'
 
 const allShipments = [
@@ -78,6 +82,10 @@ const allShipments = [
 
 export default function ImporterShipmentsPage() {
   const { openNotifications } = useNotifications()
+  const { user: authUser } = useAuth() || {}
+  const currentUser = authUser || authService.getCurrentUser()
+  const isDemoSarah = !currentUser || currentUser.email === 'importer@meynaa.com'
+
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('جميع الحالات')
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
@@ -86,7 +94,9 @@ export default function ImporterShipmentsPage() {
 
   const filterOptions = ['جميع الحالات', 'قيد الشحن', 'في الجمارك', 'مُسلمة', 'مؤجلة']
 
-  const filtered = allShipments.filter((item) => {
+  const activeShipmentsList = isDemoSarah ? allShipments : []
+
+  const filtered = activeShipmentsList.filter((item) => {
     const matchesSearch =
       item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.provider.includes(searchTerm) ||
@@ -169,7 +179,7 @@ export default function ImporterShipmentsPage() {
                 <span className="text-xs text-gray-400 font-bold block mt-0.5">
                   {viewMode === 'map'
                     ? 'تتبع حي للمركبات والشاحنات الناقلة لبضائعك عبر الأقمار الصناعية'
-                    : `إجمالي ${allShipments.length} شحنات`}
+                    : `إجمالي ${activeShipmentsList.length} شحنات`}
                 </span>
               </div>
             </div>
@@ -254,8 +264,25 @@ export default function ImporterShipmentsPage() {
           )}
         </section>
 
-        {/* Main Content: Table or Truck Tracking Map */}
-        {viewMode === 'map' ? (
+        {/* Content: Empty State when no shipments exist, or Table / Map view */}
+        {activeShipmentsList.length === 0 ? (
+          <div className="bg-white rounded-[24px] p-12 text-center border border-gray-100 shadow-xs flex flex-col items-center justify-center my-4">
+            <div className="w-16 h-16 rounded-2xl bg-[#FFF4EB] flex items-center justify-center text-[#FB8731] mb-4 shadow-sm">
+              <Ship className="w-8 h-8" />
+            </div>
+            <h3 className="text-lg font-black text-[#011222]">لا توجد شحنات نشطة حتى الآن</h3>
+            <p className="text-xs text-gray-500 mt-1 max-w-md leading-relaxed">
+              عند قبولك لعرض سعر من أحد مزودي الخدمة وتأكيد الشحن، ستظهر شحنتك هنا فوراً مع تتبع حي ومباشر بالـ GPS لمسار الشاحنة والسفينة.
+            </p>
+            <Link
+              to="/importer/rfq"
+              className="mt-5 inline-flex items-center gap-2 bg-[#FB8731] hover:bg-[#e07220] text-white text-xs font-bold px-6 py-2.5 rounded-xl shadow-sm transition-all"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>إنشاء أو متابعة طلبات عروض الأسعار</span>
+            </Link>
+          </div>
+        ) : viewMode === 'map' ? (
           <div className="pt-1">
             <TruckTrackingMap initialSelectedId={selectedTruckShipment} />
           </div>

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import ImporterSidebar from '../../../components/dashboard/ImporterSidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import { useNotifications } from '../../../context/NotificationContext'
+import { useAuth } from '../../../context/AuthContext'
+import authService from '../../../services/authService'
 import financeService from '../../../services/financeService'
 import {
   Wallet,
@@ -18,7 +20,8 @@ import {
   Sparkles,
   Clock,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Plus
 } from 'lucide-react'
 
 const initialTransactions = [
@@ -90,8 +93,12 @@ const initialTransactions = [
 
 export default function ImporterPaymentsPage() {
   const { openNotifications } = useNotifications()
+  const { user: authUser } = useAuth() || {}
+  const currentUser = authUser || authService.getCurrentUser()
+  const isDemoSarah = !currentUser || currentUser.email === 'importer@meynaa.com'
+
   const [searchTerm, setSearchTerm] = useState('')
-  const [transactions, setTransactions] = useState(initialTransactions)
+  const [transactions, setTransactions] = useState(() => (isDemoSarah ? initialTransactions : []))
   const [showDirectTransferModal, setShowDirectTransferModal] = useState(false)
   const [toastMessage, setToastMessage] = useState(null)
   const [copiedIban, setCopiedIban] = useState(false)
@@ -121,15 +128,15 @@ export default function ImporterPaymentsPage() {
   }, [])
 
   // بيانات نموذج التحويل البنكي الخارجي
-  const [transferData, setTransferData] = useState({
+  const [transferData, setTransferData] = useState(() => ({
     shipmentNumber: 'SHN-2026-884',
     currency: 'USD', // USD, DINAR, EUR
     subtotal: '1000',
-    senderBank: 'مصرف الإنماء',
-    senderName: 'مؤسسة الأفق للاستيراد',
+    senderBank: 'مصرف محلي معتمد',
+    senderName: currentUser?.fullName || (isDemoSarah ? 'مجموعة الريادة للمقاولات' : 'صاحب المنشأة'),
     referenceNumber: '',
     fileName: '',
-  })
+  }))
 
   const providerBankDetails = {
     providerName: 'شركة الفرسان للخدمات اللوجستية المحدودة',
@@ -442,6 +449,25 @@ export default function ImporterPaymentsPage() {
                 ))}
               </tbody>
             </table>
+
+            {filteredTransactions.length === 0 && (
+              <div className="text-center py-12 flex flex-col items-center justify-center">
+                <div className="w-12 h-12 rounded-2xl bg-[#FFF7ED] text-[#FB8731] flex items-center justify-center mb-3">
+                  <Wallet className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-bold text-[#011222]">لا توجد حوالات أو معاملات مسجلة بعد</p>
+                <p className="text-xs text-gray-500 mt-1 max-w-sm">
+                  ستظهر هنا كافة إيصالات السداد والحوالات البنكية الخارجية المعتمدة لشحناتك مع إمكانية تحميل الفواتير.
+                </p>
+                <button
+                  onClick={() => setShowDirectTransferModal(true)}
+                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-[#FB8731] text-white text-xs font-bold rounded-xl hover:bg-[#e07220] transition-colors cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>رفع إشعار تحويل بنكي جديد</span>
+                </button>
+              </div>
+            )}
           </div>
         </section>
 

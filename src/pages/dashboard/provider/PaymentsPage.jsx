@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import Sidebar from '../../../components/dashboard/Sidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import { useNotifications } from '../../../context/NotificationContext'
+import { useAuth } from '../../../context/AuthContext'
+import authService from '../../../services/authService'
 import financeService from '../../../services/financeService'
 import {
   Search,
@@ -108,8 +110,12 @@ const initialPayments = [
 
 export default function PaymentsPage() {
   const { openNotifications } = useNotifications()
+  const { user: authUser } = useAuth() || {}
+  const currentUser = authUser || authService.getCurrentUser()
+  const isDemoProvider = !currentUser || currentUser.email === 'provider@meynaa.com'
+
   const [searchTerm, setSearchTerm] = useState('')
-  const [incomingTransfers, setIncomingTransfers] = useState(initialIncomingTransfers)
+  const [incomingTransfers, setIncomingTransfers] = useState(() => (isDemoProvider ? initialIncomingTransfers : []))
   const [selectedReceipt, setSelectedReceipt] = useState(null)
   const [rejectModalData, setRejectModalData] = useState(null)
   const [rejectReason, setRejectReason] = useState('')
@@ -180,7 +186,8 @@ export default function PaymentsPage() {
     setRejectReason('')
   }
 
-  const filtered = initialPayments.filter((p) =>
+  const paymentsSource = isDemoProvider ? initialPayments : []
+  const filtered = paymentsSource.filter((p) =>
     p.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.client.includes(searchTerm)
   )
@@ -264,10 +271,10 @@ export default function PaymentsPage() {
             </div>
             <div className="pt-2">
               <div className="text-3xl font-black text-[#011222] tracking-tight">
-                $48,900
+                {isDemoProvider ? '$48,900' : '$0'}
               </div>
               <p className="text-xs font-bold text-[#0284C7] mt-1">
-                محولة لحسابكم البنكي
+                {isDemoProvider ? 'محولة لحسابكم البنكي' : 'لا توجد تحويلات بعد'}
               </p>
             </div>
           </div>
@@ -282,10 +289,10 @@ export default function PaymentsPage() {
             </div>
             <div className="pt-2">
               <div className="text-3xl font-black text-[#011222] tracking-tight">
-                $124,500
+                {isDemoProvider ? '$124,500' : '$0'}
               </div>
               <p className="text-xs font-bold text-[#059669] mt-1">
-                +8.5% عن الشهر الماضي
+                {isDemoProvider ? '+8.5% عن الشهر الماضي' : 'جاهز للبدء'}
               </p>
             </div>
           </div>
@@ -300,10 +307,10 @@ export default function PaymentsPage() {
             </div>
             <div className="pt-2">
               <div className="text-3xl font-black text-[#EA580C] tracking-tight">
-                $3,240
+                {isDemoProvider ? '$3,240' : '$0'}
               </div>
               <p className="text-xs text-[#64748B] mt-1">
-                تخصم وفق نسب القطاعات الرسمية
+                {isDemoProvider ? 'تخصم وفق نسب القطاعات الرسمية' : '0% عمولة تجريبية'}
               </p>
             </div>
           </div>
@@ -434,6 +441,12 @@ export default function PaymentsPage() {
                 ))}
               </tbody>
             </table>
+
+            {incomingTransfers.length === 0 && (
+              <div className="text-center py-8 text-gray-400 text-xs font-bold">
+                لا توجد إشعارات تحويل جديدة بانتظار التأكيد حالياً.
+              </div>
+            )}
           </div>
         </section>
 
@@ -486,6 +499,12 @@ export default function PaymentsPage() {
                 ))}
               </tbody>
             </table>
+
+            {filtered.length === 0 && (
+              <div className="text-center py-10 text-gray-400 text-xs font-bold">
+                لا توجد دفعات أو فواتير سابقة مسجلة بعد.
+              </div>
+            )}
           </div>
         </section>
 

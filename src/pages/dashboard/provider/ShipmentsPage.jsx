@@ -1,15 +1,19 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import Sidebar from '../../../components/dashboard/Sidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import TruckTrackingMap from '../../../components/dashboard/TruckTrackingMap'
 import { useNotifications } from '../../../context/NotificationContext'
+import { useAuth } from '../../../context/AuthContext'
+import authService from '../../../services/authService'
 import {
   Ship,
   Search,
   Bell,
   MapPin,
   Truck,
-  LayoutGrid
+  LayoutGrid,
+  ArrowRight
 } from 'lucide-react'
 
 const initialShipments = [
@@ -77,11 +81,17 @@ const initialShipments = [
 
 export default function ShipmentsPage() {
   const { openNotifications } = useNotifications()
+  const { user: authUser } = useAuth() || {}
+  const currentUser = authUser || authService.getCurrentUser()
+  const isDemoProvider = !currentUser || currentUser.email === 'provider@meynaa.com'
+
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState('table') // 'table' | 'map'
   const [selectedShipmentTruck, setSelectedShipmentTruck] = useState('TRK-104')
 
-  const filtered = initialShipments.filter((item) =>
+  const activeShipments = isDemoProvider ? initialShipments : []
+
+  const filtered = activeShipments.filter((item) =>
     item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.client.includes(searchTerm) ||
     item.route.includes(searchTerm)
@@ -194,8 +204,25 @@ export default function ShipmentsPage() {
             </div>
           </div>
 
-          {/* Conditional View: Map or Table */}
-          {viewMode === 'map' ? (
+          {/* Conditional View: Empty state when no shipments, or Map / Table */}
+          {activeShipments.length === 0 ? (
+            <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-xs flex flex-col items-center justify-center my-4">
+              <div className="w-16 h-16 rounded-2xl bg-[#FFF4EB] flex items-center justify-center text-[#FB8731] mb-4 shadow-sm">
+                <Ship className="w-8 h-8" />
+              </div>
+              <h3 className="text-lg font-black text-[#011222]">لا توجد شحنات مسندة حتى الآن</h3>
+              <p className="text-xs text-gray-500 mt-1 max-w-md leading-relaxed">
+                ابدأ باستعراض طلبات عروض الأسعار (RFQ) المتاحة من المستوردين، وقدم عروضك التنافسية لتبدأ بتنفيذ شحنات جديدة.
+              </p>
+              <Link
+                to="/dashboard/rfq"
+                className="mt-5 inline-flex items-center gap-2 bg-[#FB8731] hover:bg-[#e07220] text-white text-xs font-bold px-6 py-2.5 rounded-xl shadow-sm transition-all"
+              >
+                <span>استعراض طلبات الأسعار (RFQ) المتاحة</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          ) : viewMode === 'map' ? (
             <div className="pt-2">
               <TruckTrackingMap initialSelectedId={selectedShipmentTruck} />
             </div>

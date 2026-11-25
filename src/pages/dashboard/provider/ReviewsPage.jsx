@@ -2,6 +2,8 @@ import { useState } from 'react'
 import Sidebar from '../../../components/dashboard/Sidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import { useNotifications } from '../../../context/NotificationContext'
+import { useAuth } from '../../../context/AuthContext'
+import authService from '../../../services/authService'
 import {
   Star,
   Search,
@@ -39,9 +41,15 @@ const reviews = [
 
 export default function ReviewsPage() {
   const { openNotifications } = useNotifications()
+  const { user: authUser } = useAuth() || {}
+  const currentUser = authUser || authService.getCurrentUser()
+  const isDemoProvider = !currentUser || currentUser.email === 'provider@meynaa.com'
+
   const [searchTerm, setSearchTerm] = useState('')
 
-  const filtered = reviews.filter((r) =>
+  const activeReviews = isDemoProvider ? reviews : []
+
+  const filtered = activeReviews.filter((r) =>
     r.author.includes(searchTerm) ||
     r.comment.includes(searchTerm) ||
     r.shipment.toLowerCase().includes(searchTerm.toLowerCase())
@@ -152,7 +160,7 @@ export default function ReviewsPage() {
 
             {/* Score Content */}
             <span className="text-6xl font-black text-[#011222] tracking-tight leading-none mb-3">
-              4.9
+              {isDemoProvider ? '4.9' : '5.0'}
             </span>
 
             {/* 5 Orange Stars */}
@@ -163,7 +171,7 @@ export default function ReviewsPage() {
             </div>
 
             <span className="text-xs font-bold text-[#777777] mt-1">
-              من اصل تقييم
+              {isDemoProvider ? 'من اصل 124 تقييم' : 'حساب جديد معتمد'}
             </span>
           </div>
         </section>
@@ -218,6 +226,18 @@ export default function ReviewsPage() {
                 </div>
               </div>
             ))}
+
+            {filtered.length === 0 && (
+              <div className="text-center py-10 flex flex-col items-center justify-center">
+                <div className="w-12 h-12 rounded-2xl bg-[#FFF7ED] text-[#FB8731] flex items-center justify-center mb-3">
+                  <Star className="w-6 h-6 fill-current" />
+                </div>
+                <p className="text-sm font-bold text-[#011222]">لا توجد تقييمات مسجلة بعد</p>
+                <p className="text-xs text-gray-500 mt-1 max-w-sm">
+                  ستظهر هنا آراء وتقييمات المستوردين فور إتمام أول شحنة وتسليمها بنجاح.
+                </p>
+              </div>
+            )}
           </div>
         </section>
 

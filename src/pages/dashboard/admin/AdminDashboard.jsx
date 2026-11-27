@@ -173,7 +173,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="px-1">
                   <Handshake className="w-4 h-4 text-[#2563EB] mx-auto mb-1" />
-                  <span className="text-sm font-black text-[#011222] block font-mono">680</span>
+                  <span className="text-sm font-black text-[#011222] block font-mono">{kpiData?.totalProviders ?? 680}</span>
                   <span className="text-[10px] text-gray-500 font-bold">مزود خدمة</span>
                 </div>
                 <div className="px-1">
@@ -204,22 +204,22 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-4 divide-x divide-x-reverse divide-[#A7F3D0]/80 pt-3 border-t border-[#A7F3D0]/80 text-center">
                 <div className="px-0.5">
                   <Ship className="w-3.5 h-3.5 text-[#065F46] mx-auto mb-1" />
-                  <span className="text-xs font-black text-[#011222] block font-mono">2,150</span>
+                  <span className="text-xs font-black text-[#011222] block font-mono">{kpiData?.seaShipments ?? 2150}</span>
                   <span className="text-[9px] text-gray-500 font-bold">بحري</span>
                 </div>
                 <div className="px-0.5">
                   <Truck className="w-3.5 h-3.5 text-[#065F46] mx-auto mb-1" />
-                  <span className="text-xs font-black text-[#011222] block font-mono">3,200</span>
+                  <span className="text-xs font-black text-[#011222] block font-mono">{kpiData?.landShipments ?? 3200}</span>
                   <span className="text-[9px] text-gray-500 font-bold">بري</span>
                 </div>
                 <div className="px-0.5">
                   <Plane className="w-3.5 h-3.5 text-[#0284C7] mx-auto mb-1" />
-                  <span className="text-xs font-black text-[#011222] block font-mono">2,900</span>
+                  <span className="text-xs font-black text-[#011222] block font-mono">{kpiData?.airShipments ?? 2900}</span>
                   <span className="text-[9px] text-gray-500 font-bold">جوي</span>
                 </div>
                 <div className="px-0.5">
                   <FileCheck className="w-3.5 h-3.5 text-[#065F46] mx-auto mb-1" />
-                  <span className="text-xs font-black text-[#011222] block font-mono">500</span>
+                  <span className="text-xs font-black text-[#011222] block font-mono">{kpiData?.customsShipments ?? 500}</span>
                   <span className="text-[9px] text-gray-500 font-bold">التخليص الجمركي</span>
                 </div>
               </div>
@@ -277,7 +277,7 @@ export default function AdminDashboard() {
 
               <div className="mt-2 text-right">
                 <div className="text-2xl sm:text-3xl font-black text-[#011222] font-mono tracking-tight">
-                  $12,850,000
+                  {kpiData?.totalTradingVolume ? `$${kpiData.totalTradingVolume.toLocaleString()}` : '$12,850,000'}
                 </div>
                 <div className="flex items-center gap-1 text-xs font-bold text-[#009F65] mt-1.5 font-mono">
                   <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />

@@ -4,31 +4,40 @@ export class AdminService {
   // 1. إحصائيات لوحة التحكم العامة (KPIs)
   static async getDashboardKPIs() {
     const totalUsers = await prisma.user.count()
-    const activeTrucks = await prisma.truck.count({ where: { status: 'ON_DUTY' } })
+    const totalImporters = await prisma.user.count({ where: { role: 'IMPORTER' } })
+    const totalProviders = await prisma.user.count({ where: { role: 'PROVIDER' } })
+    const activeTrucks = await prisma.truck.count()
     const totalShipments = await prisma.shipment.count()
-    const pendingTransfers = await prisma.bankTransferTransaction.count({ where: { status: 'SUBMITTED' } })
+    const seaShipments = await prisma.shipment.count({ where: { sector: 'SEA_FREIGHT' } })
+    const landShipments = await prisma.shipment.count({ where: { sector: 'LAND_TRANSPORT' } })
+    const airShipments = await prisma.shipment.count({ where: { sector: 'AIR_FREIGHT' } })
+    const customsShipments = await prisma.shipment.count({ where: { sector: 'CUSTOMS_CLEARANCE' } })
+    const pendingTransfers = await prisma.bankTransferTransaction.count({ where: { status: 'SUBMITTED_TO_ADMIN' } })
     const activeAlerts = await prisma.fleetAlert.count({ where: { isResolved: false } })
 
     const invoices = await prisma.invoice.findMany({
       select: { totalAmount: true, commissionAmount: true, paymentStatus: true },
     })
 
-    const totalRevenue = invoices
-      .filter((i) => i.paymentStatus === 'ESCROW_HOLD' || i.paymentStatus === 'PAID_OUT_TO_PROVIDER')
-      .reduce((sum, i) => sum + i.totalAmount, 0)
-
-    const totalCommissions = invoices
-      .filter((i) => i.paymentStatus === 'ESCROW_HOLD' || i.paymentStatus === 'PAID_OUT_TO_PROVIDER')
-      .reduce((sum, i) => sum + i.commissionAmount, 0)
+    const totalRevenue = invoices.reduce((sum, i) => sum + i.totalAmount, 0)
+    const totalCommissions = invoices.reduce((sum, i) => sum + i.commissionAmount, 0)
+    const totalTradingVolume = totalRevenue
 
     return {
       totalUsers,
+      totalImporters,
+      totalProviders,
       activeTrucks,
       totalShipments,
+      seaShipments,
+      landShipments,
+      airShipments,
+      customsShipments,
       pendingTransfers,
       activeAlerts,
       totalRevenue,
       totalCommissions,
+      totalTradingVolume,
     }
   }
 

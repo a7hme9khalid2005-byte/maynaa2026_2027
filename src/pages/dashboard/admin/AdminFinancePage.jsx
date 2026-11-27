@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import AdminSidebar from '../../../components/dashboard/AdminSidebar'
 import AdminHeader from '../../../components/dashboard/AdminHeader'
+import { useAuth } from '../../../context/AuthContext'
+import authService from '../../../services/authService'
 import financeService from '../../../services/financeService'
 import {
   Coins,
@@ -325,16 +327,20 @@ function buildPrintHtml(invoicesList) {
 }
 
 export default function AdminFinancePage() {
+  const { user: authUser } = useAuth() || {}
+  const currentUser = authUser || authService.getCurrentUser()
+  const isDemoAdmin = currentUser?.email === 'admin@meynaa.com'
+
   const [searchQuery, setSearchQuery] = useState('')
   const [chartPeriod, setChartPeriod] = useState('30days')
   const [toastMessage, setToastMessage] = useState('')
-  const [invoices] = useState(initialInvoices)
-  const [transfers] = useState(initialTransfers)
-  const [transactions] = useState(initialTransactions)
+  const [invoices] = useState(() => (isDemoAdmin ? initialInvoices : []))
+  const [transfers] = useState(() => (isDemoAdmin ? initialTransfers : []))
+  const [transactions] = useState(() => (isDemoAdmin ? initialTransactions : []))
   const [previewInvoice, setPreviewInvoice] = useState(null)
 
   // حالة إشعارات التحويل البنكي الخارجي قيد تدقيق الإدارة (المستورد -> الأدمن -> المزود)
-  const [auditTransfers, setAuditTransfers] = useState(initialAdminAuditTransfers)
+  const [auditTransfers, setAuditTransfers] = useState(() => (isDemoAdmin ? initialAdminAuditTransfers : []))
   const [selectedReceiptPreview, setSelectedReceiptPreview] = useState(null)
   const [rejectModalData, setRejectModalData] = useState(null)
   const [rejectReason, setRejectReason] = useState('')

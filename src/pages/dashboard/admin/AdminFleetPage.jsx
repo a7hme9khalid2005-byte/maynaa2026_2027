@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import AdminSidebar from '../../../components/dashboard/AdminSidebar'
 import AdminHeader from '../../../components/dashboard/AdminHeader'
 import RealFleetMap from '../../../components/dashboard/RealFleetMap'
+import { useAuth } from '../../../context/AuthContext'
+import authService from '../../../services/authService'
 import api from '../../../services/api'
 import {
   Truck,
@@ -331,8 +333,12 @@ const FULL_EMERGENCY_ALERTS = [
 ]
 
 export default function AdminFleetPage() {
-  const [fleetList, setFleetList] = useState(initialFleet)
-  const [selectedTruck, setSelectedTruck] = useState(initialFleet[0])
+  const { user: authUser } = useAuth() || {}
+  const currentUser = authUser || authService.getCurrentUser()
+  const isDemoAdmin = currentUser?.email === 'admin@meynaa.com'
+
+  const [fleetList, setFleetList] = useState(() => (isDemoAdmin ? initialFleet : []))
+  const [selectedTruck, setSelectedTruck] = useState(() => (isDemoAdmin ? initialFleet[0] : null))
   const [statusFilter, setStatusFilter] = useState('all') // 'all' | 'متحركة' | 'بانتظار التفتيش الجمركي' | 'استراحة نظامية' | 'معطلة'
   const [searchTerm, setSearchTerm] = useState('')
   const mapSectionRef = useRef(null)
@@ -357,11 +363,11 @@ export default function AdminFleetPage() {
             temp: t.lastTemperature ? `${t.lastTemperature}°C` : '-18°C',
           }))
           setFleetList(mapped)
-          setSelectedTruck(mapped[0])
+          setSelectedTruck((prev) => prev || mapped[0])
         }
       })
       .catch(() => {})
-  }, [])
+  }, [isDemoAdmin])
 
   // Emergency Alerts Management State
   const [alerts, setAlerts] = useState(FULL_EMERGENCY_ALERTS)
@@ -477,10 +483,10 @@ export default function AdminFleetPage() {
               <div>
                 <span className="text-xs font-bold text-[#065F46] block mb-1">متحركة</span>
                 <div className="text-2xl sm:text-3xl font-black text-[#011222] font-mono leading-none">
-                  248
+                  {isDemoAdmin ? 248 : fleetList.filter((f) => f.status === 'متحركة').length}
                 </div>
                 <span className="text-xs font-bold text-[#009F65] font-mono block mt-2">
-                  12%
+                  {isDemoAdmin ? '12%' : 'شاحنات نشطة'}
                 </span>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-white/90 border border-[#A7F3D0] text-[#009F65] flex items-center justify-center shrink-0 shadow-xs">
@@ -493,10 +499,10 @@ export default function AdminFleetPage() {
               <div>
                 <span className="text-xs font-bold text-[#9A3412] block mb-1">بانتظار التفتيش الجمركي</span>
                 <div className="text-2xl sm:text-3xl font-black text-[#011222] font-mono leading-none">
-                  46
+                  {isDemoAdmin ? 46 : fleetList.filter((f) => f.status === 'بانتظار التفتيش الجمركي').length}
                 </div>
                 <span className="text-xs font-bold text-[#009F65] font-mono block mt-2">
-                  6%
+                  {isDemoAdmin ? '6%' : 'في المنافذ'}
                 </span>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-white/90 border border-[#FED7AA] text-[#FB8731] flex items-center justify-center shrink-0 shadow-xs">
@@ -509,10 +515,10 @@ export default function AdminFleetPage() {
               <div>
                 <span className="text-xs font-bold text-[#0369A1] block mb-1">شاحنات في استراحة نظامية</span>
                 <div className="text-2xl sm:text-3xl font-black text-[#011222] font-mono leading-none">
-                  72
+                  {isDemoAdmin ? 72 : fleetList.filter((f) => f.status === 'استراحة نظامية').length}
                 </div>
                 <span className="text-xs font-bold text-[#009F65] font-mono block mt-2">
-                  8%
+                  {isDemoAdmin ? '8%' : 'استراحة معتمدة'}
                 </span>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-white/90 border border-[#BAE6FD] text-[#0284C7] flex items-center justify-center shrink-0 shadow-xs">
@@ -525,10 +531,10 @@ export default function AdminFleetPage() {
               <div>
                 <span className="text-xs font-bold text-[#9F1239] block mb-1">الشاحنات المعطلة</span>
                 <div className="text-2xl sm:text-3xl font-black text-[#011222] font-mono leading-none">
-                  18
+                  {isDemoAdmin ? 18 : fleetList.filter((f) => f.status === 'معطلة').length}
                 </div>
                 <span className="text-xs font-bold text-[#DC2626] font-mono block mt-2">
-                  5%
+                  {isDemoAdmin ? '5%' : 'تحت الصيانة'}
                 </span>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-white/90 border border-[#FECDD3] text-[#DC2626] flex items-center justify-center shrink-0 shadow-xs">

@@ -18,6 +18,19 @@ export class FinanceController {
     }
   }
 
+  // استرجاع سجل الحوالات البنكية للمستورد الحالي
+  static async getMyTransfers(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return sendError(res, 'يجب تسجيل الدخول', 401)
+      }
+      const transfers = await FinanceService.getImporterTransfers(req.user.id)
+      return sendSuccess(res, transfers, 'تم جلب سجل الحوالات البنكية بنجاح')
+    } catch (err: any) {
+      return sendError(res, err.message)
+    }
+  }
+
   // 2. استرجاع بيانات الحساب البنكي لمزود الخدمة الخاص بالشحنة
   static async getProviderBankDetails(req: Request, res: Response) {
     try {

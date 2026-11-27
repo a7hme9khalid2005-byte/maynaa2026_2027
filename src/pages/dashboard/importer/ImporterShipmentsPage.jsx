@@ -102,18 +102,32 @@ export default function ImporterShipmentsPage() {
     api.get('/shipments')
       .then((res) => {
         if (Array.isArray(res?.data) && res.data.length > 0) {
-          const mapped = res.data.map((s) => ({
-            id: s.trackingNumber || s.id,
-            origin: s.originAddress || 'ميناء المنشأ',
-            destination: s.destinationAddress || 'مستودع الوجهة',
-            provider: s.provider?.fullName || 'شركة الشحن المعتمدة',
-            route: `${s.originAddress || 'المصدر'} ← ${s.destinationAddress || 'الوجهة'}`,
-            status: s.status === 'DELIVERED' ? 'مُسلمة' : s.status === 'IN_TRANSIT' ? 'قيد الشحن' : s.status === 'CUSTOMS' ? 'في الجمارك' : 'قيد الشحن',
-            type: s.transportType === 'SEA' ? 'بحري FCL' : s.transportType === 'AIR' ? 'جوي سريع' : 'بري',
-            eta: s.etaDate ? new Date(s.etaDate).toLocaleDateString('ar-SA') : 'خلال 4 أيام',
-            price: s.invoice?.totalAmount ? `$${s.invoice.totalAmount.toLocaleString()}` : '$12,500',
-            progress: s.status === 'DELIVERED' ? 100 : s.status === 'CUSTOMS' ? 80 : 50,
-          }))
+          const statusMap = {
+            DELIVERED: { text: 'مُسلمة', bg: '#E6F9F0', color: '#009F65', progress: 100, pColor: '#009F65' },
+            IN_TRANSIT: { text: 'قيد الشحن', bg: '#FFF3EA', color: '#EA580C', progress: 65, pColor: '#FB8731' },
+            CUSTOMS_HOLD: { text: 'في الجمارك', bg: '#FFF3EA', color: '#FB8731', progress: 85, pColor: '#FB8731' },
+            READY_FOR_PICKUP: { text: 'قيد التجهيز', bg: '#EBF5FE', color: '#0284C7', progress: 30, pColor: '#0284C7' },
+            CANCELLED: { text: 'مؤجلة', bg: '#FEECEC', color: '#EF4444', progress: 45, pColor: '#EF4444' },
+          }
+
+          const mapped = res.data.map((s) => {
+            const st = statusMap[s.status] || { text: 'قيد الشحن', bg: '#FFF3EA', color: '#EA580C', progress: 50, pColor: '#FB8731' }
+            const route = `${s.originName || 'المنشأ'} _ ${s.destName || 'الوجهة'}`
+            const val = s.invoice?.totalAmount ? `$${Number(s.invoice.totalAmount).toLocaleString()}` : '$15,000'
+            const eta = s.updatedAt ? new Date(s.updatedAt).toISOString().split('T')[0] : '2026-09-30'
+            return {
+              id: s.trackingNumber || s.id,
+              provider: s.provider?.fullName || 'شركة الأفق للشحن الدولي',
+              route,
+              value: val,
+              progress: st.progress,
+              progressColor: st.pColor,
+              status: st.text,
+              statusBg: st.bg,
+              statusColor: st.color,
+              eta,
+            }
+          })
           setDbShipments(mapped)
         }
       })

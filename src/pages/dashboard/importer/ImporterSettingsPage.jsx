@@ -50,26 +50,6 @@ export default function ImporterSettingsPage() {
     annualImport: isDemoSarah ? '4.2M$' : '0$'
   }))
 
-  // قراءة بيانات المستخدم المباشرة من قاعدة البيانات فور فتح الصفحة
-  useEffect(() => {
-    if (isDemoSarah) return
-    authService.getProfile()
-      .then((res) => {
-        const u = res?.data
-        if (u) {
-          if (setUser) setUser(u)
-          setFormData((prev) => ({
-            ...prev,
-            managerName: u.fullName || prev.managerName,
-            companyName: u.companyName || u.companyProfile?.companyNameAr || prev.companyName,
-            email: u.email || prev.email,
-            phone: u.phone || prev.phone,
-          }))
-        }
-      })
-      .catch(() => {})
-  }, [isDemoSarah, setUser])
-
   // Saved Addresses
   const [addresses, setAddresses] = useState(() => {
     if (isDemoSarah) {
@@ -153,6 +133,57 @@ export default function ImporterSettingsPage() {
     twoFactorEnabled: true
   })
 
+  // قراءة بيانات المستخدم المباشرة من قاعدة البيانات فور فتح الصفحة
+  useEffect(() => {
+    if (isDemoSarah) return
+    authService.getProfile()
+      .then((res) => {
+        const u = res?.data
+        if (u) {
+          if (setUser) setUser(u)
+          const cp = u.companyProfile || {}
+          setFormData((prev) => ({
+            ...prev,
+            managerName: u.fullName || prev.managerName,
+            jobTitle: cp.jobTitle || prev.jobTitle,
+            companyName: u.companyName || cp.companyNameAr || prev.companyName,
+            businessSector: cp.businessSector || u.businessType || prev.businessSector,
+            email: u.email || prev.email,
+            phone: u.phone || prev.phone,
+            headquarters: cp.headquarters || u.companyAddress || prev.headquarters,
+            annualImport: cp.annualImport || prev.annualImport,
+          }))
+
+          if (cp.savedAddresses) {
+            try {
+              const parsedAddresses = typeof cp.savedAddresses === 'string'
+                ? JSON.parse(cp.savedAddresses)
+                : cp.savedAddresses
+              if (Array.isArray(parsedAddresses) && parsedAddresses.length > 0) {
+                setAddresses(parsedAddresses)
+              }
+            } catch {
+              // ignore json parse error
+            }
+          }
+
+          if (cp.notificationPrefs) {
+            try {
+              const parsedPrefs = typeof cp.notificationPrefs === 'string'
+                ? JSON.parse(cp.notificationPrefs)
+                : cp.notificationPrefs
+              if (parsedPrefs && typeof parsedPrefs === 'object') {
+                setNotifications((prev) => ({ ...prev, ...parsedPrefs }))
+              }
+            } catch {
+              // ignore json parse error
+            }
+          }
+        }
+      })
+      .catch(() => {})
+  }, [isDemoSarah, setUser])
+
   const showToast = (msg) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3500)
@@ -165,9 +196,14 @@ export default function ImporterSettingsPage() {
     try {
       // حفظ التحديثات في قاعدة بيانات Supabase مباشرة عبر الـ API
       await authService.updateProfile({
+        managerName: formData.managerName,
         fullName: formData.managerName,
         companyName: formData.companyName,
         phone: formData.phone,
+        businessSector: formData.businessSector,
+        headquarters: formData.headquarters,
+        jobTitle: formData.jobTitle,
+        annualImport: formData.annualImport,
       })
       showToast('تم حفظ وتحديث بيانات المنشأة في قاعدة البيانات بنجاح!')
     } catch {
@@ -184,40 +220,51 @@ export default function ImporterSettingsPage() {
         localStorage.setItem('meynaa_user', JSON.stringify(updatedUser))
         window.dispatchEvent(new Event('storage'))
       }
-      showToast('تم حفظ بيانات المنشأة محلياً!')
+      showToast('تم حفظ بيانات المنشأة بنجاح!')
     } finally {
       setTimeout(() => setSaved(false), 3000)
     }
   }
 
-  const handleSetDefaultAddress = (id) => {
-    setAddresses(
-      addresses.map((addr) => ({
-        ...addr,
-        isDefault: addr.id === id
-      }))
-    )
-    showToast('تم تعيين العنوان كافتراضي بنجاح')
+  const handleSetDefaultAddress = async (id) => {
+    const updated = addresses.map((addr) => ({
+      ...addr,
+      isDefault: addr.id === id
+    }))
+    setAddresses(updated)
+    try {
+      await authService.updateProfile({ savedAddresses: updated })
+      showToast('تم تعيين العنوان كافتراضي وحفظه في قاعدة البيانات')
+    } catch {
+      showToast('تم تعيين العنوان كافتراضي بنجاح')
+    }
   }
 
-  const handleDeleteAddress = (id) => {
-    setAddresses(addresses.filter((addr) => addr.id !== id))
-    showToast('تم حذف العنوان بنجاح')
+  const handleDeleteAddress = async (id) => {
+    const updated = addresses.filter((addr) => addr.id !== id)
+    setAddresses(updated)
+    try {
+      await authService.updateProfile({ savedAddresses: updated })
+      showToast('تم حذف العنوان وتحديث قاعدة البيانات بنجاح')
+    } catch {
+      showToast('تم حذف العنوان بنجاح')
+    }
   }
 
-  const handleAddAddressSubmit = (e) => {
+  const handleAddAddressSubmit = async (e) => {
     e.preventDefault()
     if (!newAddr.name || !newAddr.address) return
 
-    const newId = `ADDR-${addresses.length + 1}`
-    setAddresses([
+    const newId = `ADDR-${Date.now()}`
+    const updated = [
       ...addresses,
       {
         ...newAddr,
         id: newId,
         isDefault: addresses.length === 0
       }
-    ])
+    ]
+    setAddresses(updated)
     setShowAddressModal(false)
     setNewAddr({
       name: '',
@@ -227,14 +274,25 @@ export default function ImporterSettingsPage() {
       recipient: '',
       phone: ''
     })
-    showToast('تمت إضافة العنوان الجديد بنجاح!')
+
+    try {
+      await authService.updateProfile({ savedAddresses: updated })
+      showToast('تمت إضافة العنوان الجديد وحفظه في قاعدة البيانات بنجاح!')
+    } catch {
+      showToast('تمت إضافة العنوان الجديد بنجاح!')
+    }
   }
 
-  const handleSaveNotifications = () => {
-    showToast('تم حفظ تفضيلات الإشعارات بنجاح!')
+  const handleSaveNotifications = async () => {
+    try {
+      await authService.updateProfile({ notificationPrefs: notifications })
+      showToast('تم حفظ تفضيلات الإشعارات في قاعدة البيانات بنجاح!')
+    } catch {
+      showToast('تم حفظ تفضيلات الإشعارات بنجاح!')
+    }
   }
 
-  const handlePasswordUpdate = (e) => {
+  const handlePasswordUpdate = async (e) => {
     e.preventDefault()
     if (!securityForm.newPassword || !securityForm.currentPassword) {
       showToast('يرجى تعبئة الحقول المطلوبة')
@@ -244,13 +302,19 @@ export default function ImporterSettingsPage() {
       showToast('كلمتا المرور غير متطابقتين!')
       return
     }
-    setSecurityForm({
-      ...securityForm,
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    })
-    showToast('تم تحديث كلمة المرور بنجاح!')
+
+    try {
+      await authService.changePassword(securityForm.currentPassword, securityForm.newPassword)
+      setSecurityForm({
+        ...securityForm,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      })
+      showToast('تم تحديث كلمة المرور وتشفيرها في قاعدة البيانات بنجاح!')
+    } catch (err) {
+      showToast(err?.response?.data?.message || err?.message || 'فشل تحديث كلمة المرور')
+    }
   }
 
   return (

@@ -156,6 +156,7 @@ export default function ImporterRFQPage() {
             statusColor: r.status === 'OPEN' ? '#0284C7' : '#009F65',
             bids: (r.quotes || []).map((q) => ({
               id: q.id,
+              quoteId: q.id,
               provider: q.provider?.fullName || q.provider?.companyProfile?.companyNameAr || 'مزود خدمة معتمد',
               providerInitials: (q.provider?.fullName || 'م').slice(0, 1),
               providerCode: 'PRV',

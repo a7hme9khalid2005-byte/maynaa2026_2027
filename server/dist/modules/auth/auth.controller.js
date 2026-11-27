@@ -80,23 +80,52 @@ class AuthController {
             const userId = req.user?.id;
             if (!userId)
                 return (0, response_util_js_1.sendError)(res, 'غير مصرح', 401);
-            const { fullName, phone, companyName, crNumber } = req.body;
+            const { fullName, managerName, phone, companyName, crNumber, vatNumber, businessSector, headquarters, jobTitle, annualImport, savedAddresses, notificationPrefs, } = req.body;
+            const nameToUpdate = managerName || fullName;
+            const savedAddressesStr = savedAddresses !== undefined
+                ? typeof savedAddresses === 'string'
+                    ? savedAddresses
+                    : JSON.stringify(savedAddresses)
+                : undefined;
+            const notificationPrefsStr = notificationPrefs !== undefined
+                ? typeof notificationPrefs === 'string'
+                    ? notificationPrefs
+                    : JSON.stringify(notificationPrefs)
+                : undefined;
+            const profileData = {};
+            if (companyName)
+                profileData.companyNameAr = companyName;
+            if (crNumber)
+                profileData.crNumber = crNumber;
+            if (vatNumber !== undefined)
+                profileData.vatNumber = vatNumber;
+            if (businessSector !== undefined)
+                profileData.businessSector = businessSector;
+            if (headquarters !== undefined)
+                profileData.headquarters = headquarters;
+            if (jobTitle !== undefined)
+                profileData.jobTitle = jobTitle;
+            if (annualImport !== undefined)
+                profileData.annualImport = annualImport;
+            if (savedAddressesStr !== undefined)
+                profileData.savedAddresses = savedAddressesStr;
+            if (notificationPrefsStr !== undefined)
+                profileData.notificationPrefs = notificationPrefsStr;
+            const hasProfileUpdates = Object.keys(profileData).length > 0;
             const updated = await prisma_js_1.prisma.user.update({
                 where: { id: userId },
                 data: {
-                    fullName: fullName || undefined,
+                    fullName: nameToUpdate || undefined,
                     phone: phone || undefined,
-                    companyProfile: companyName
+                    companyProfile: hasProfileUpdates
                         ? {
                             upsert: {
                                 create: {
-                                    companyNameAr: companyName,
+                                    companyNameAr: companyName || 'مؤسسة تجارية',
                                     crNumber: crNumber || '1010000000',
+                                    ...profileData,
                                 },
-                                update: {
-                                    companyNameAr: companyName,
-                                    crNumber: crNumber || undefined,
-                                },
+                                update: profileData,
                             },
                         }
                         : undefined,
@@ -114,10 +143,23 @@ class AuthController {
                 crNumber: updated.companyProfile?.crNumber || '',
                 companyProfile: updated.companyProfile,
             };
-            return (0, response_util_js_1.sendSuccess)(res, userProfile, 'تم تحديث بيانات الملف الشخصي بنجاح');
+            return (0, response_util_js_1.sendSuccess)(res, userProfile, 'تم حفظ وتحديث البيانات في قاعدة البيانات بنجاح');
         }
         catch (err) {
             return (0, response_util_js_1.sendError)(res, err.message || 'فشل تحديث البيانات');
+        }
+    }
+    static async changePassword(req, res) {
+        try {
+            const userId = req.user?.id;
+            if (!userId)
+                return (0, response_util_js_1.sendError)(res, 'غير مصرح', 401);
+            const { currentPassword, newPassword } = req.body;
+            await auth_service_js_1.AuthService.changePassword(userId, currentPassword, newPassword);
+            return (0, response_util_js_1.sendSuccess)(res, null, 'تم تحديث كلمة المرور بنجاح في قاعدة البيانات');
+        }
+        catch (err) {
+            return (0, response_util_js_1.sendError)(res, err.message || 'فشل تحديث كلمة المرور', 400);
         }
     }
 }

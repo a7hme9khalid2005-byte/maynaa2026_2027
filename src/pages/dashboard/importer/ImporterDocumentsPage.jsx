@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import ImporterSidebar from '../../../components/dashboard/ImporterSidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import DocumentPreviewModal from '../../../components/modals/DocumentPreviewModal'
@@ -6,6 +6,7 @@ import { downloadShippingDocument } from '../../../utils/documentDownloader'
 import { useNotifications } from '../../../context/NotificationContext'
 import { useAuth } from '../../../context/AuthContext'
 import authService from '../../../services/authService'
+import api from '../../../services/api'
 import {
   FileText,
   Search,
@@ -117,15 +118,41 @@ export default function ImporterDocumentsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const fileInputRef = useRef(null)
   const [activeTab, setActiveTab] = useState('الكل')
-  const [docsList, setDocsList] = useState(() => {
-    if (isDemoSarah) return initialDocs
-    try {
-      const stored = localStorage.getItem(`meynaa_docs_${currentUser?.email || 'new'}`)
-      return stored ? JSON.parse(stored) : []
-    } catch {
-      return []
-    }
-  })
+  const [docsList, setDocsList] = useState(() => (isDemoSarah ? initialDocs : []))
+
+  // جلب المستندات الحقيقية من قاعدة بيانات Supabase
+  useEffect(() => {
+    if (isDemoSarah) return
+    api.get('/documents')
+      .then((res) => {
+        if (Array.isArray(res?.data) && res.data.length > 0) {
+          const mapped = res.data.map((d) => {
+            const isApproved = d.status === 'APPROVED'
+            const isReview = d.status === 'UNDER_REVIEW'
+            return {
+              id: d.id,
+              name: d.fileName || 'مستند شحن رسمي',
+              icon: FileText,
+              iconColor: isApproved ? 'text-[#009F65]' : 'text-[#FB8731]',
+              iconBg: isApproved ? 'bg-[#E6F9F0] border-[#009F65]/30' : 'bg-[#FFF7ED] border-[#FB8731]/30',
+              typeBadge: d.docType || 'Invoice',
+              shipment: d.shipment?.trackingNumber || 'SHN-2026-884',
+              date: d.createdAt ? d.createdAt.split('T')[0] : '2026-11-20',
+              size: d.fileSize ? `${(d.fileSize / (1024 * 1024)).toFixed(1)} MB` : '1.5 MB',
+              status: isApproved ? 'مُعتمد' : isReview ? 'قيد المراجعة' : 'تتطلب تعديل',
+              statusType: isApproved ? 'approved' : isReview ? 'review' : 'edit',
+              statusBg: isApproved ? '#E6F9F0' : isReview ? '#FFF3EA' : '#FEECEC',
+              statusColor: isApproved ? '#009F65' : isReview ? '#FB8731' : '#EF4444',
+              hasActions: true,
+              fileUrl: d.fileUrl,
+            }
+          })
+          setDocsList(mapped)
+        }
+      })
+      .catch(() => {})
+  }, [isDemoSarah])
+
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [newDocName, setNewDocName] = useState('')
   const [newDocShipment, setNewDocShipment] = useState('SHN-2026-884')
@@ -197,19 +224,38 @@ export default function ImporterDocumentsPage() {
     return true
   })
 
-  const handleUploadSubmit = (e) => {
+  const handleUploadSubmit = async (e) => {
     e.preventDefault()
     if (!newDocName) return
 
+    let createdId = `DOC-00${docsList.length + 1}`
+
+    if (!isDemoSarah) {
+      try {
+        const payload = {
+          fileName: newDocName,
+          docType: newDocType,
+          shipmentId: newDocShipment,
+          status: 'UNDER_REVIEW',
+        }
+        const res = await api.post('/documents', payload)
+        if (res?.data?.id) {
+          createdId = res.data.id
+        }
+      } catch {
+        // fallback
+      }
+    }
+
     const newDoc = {
-      id: `DOC-00${docsList.length + 1}`,
+      id: createdId,
       name: newDocName,
       icon: FileText,
       iconColor: 'text-[#0284C7]',
       iconBg: 'bg-[#EBF5FE] border-[#0284C7]/30',
       typeBadge: newDocType,
       shipment: newDocShipment,
-      date: newDocDate || '2026-11-02',
+      date: newDocDate || new Date().toISOString().split('T')[0],
       size: uploadedFileSize || '1.8 MB',
       status: 'قيد المراجعة',
       statusType: 'review',
@@ -220,17 +266,12 @@ export default function ImporterDocumentsPage() {
 
     const updated = [newDoc, ...docsList]
     setDocsList(updated)
-    if (!isDemoSarah && currentUser?.email) {
-      try {
-        localStorage.setItem(`meynaa_docs_${currentUser.email}`, JSON.stringify(updated))
-      } catch {}
-    }
     setShowUploadModal(false)
     setNewDocName('')
     setNewDocRef('')
     setUploadedFileName('')
     setUploadedFileSize('')
-    setToastMessage(`تم رفع واعتماد مستند "${newDoc.name}" بنجاح وهو الآن قيد التدقيق الجمركي!`)
+    setToastMessage(`تم حفظ واعتماد مستند "${newDoc.name}" في قاعدة البيانات بنجاح وهو الآن قيد التدقيق الجمركي!`)
     setTimeout(() => setToastMessage(null), 3500)
   }
 

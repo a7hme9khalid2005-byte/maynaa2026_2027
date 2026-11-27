@@ -98,24 +98,64 @@ export class AuthController {
       const userId = req.user?.id
       if (!userId) return sendError(res, 'غير مصرح', 401)
 
-      const { fullName, phone, companyName, crNumber } = req.body
+      const {
+        fullName,
+        managerName,
+        phone,
+        companyName,
+        crNumber,
+        vatNumber,
+        businessSector,
+        headquarters,
+        jobTitle,
+        annualImport,
+        savedAddresses,
+        notificationPrefs,
+      } = req.body
+
+      const nameToUpdate = managerName || fullName
+
+      const savedAddressesStr =
+        savedAddresses !== undefined
+          ? typeof savedAddresses === 'string'
+            ? savedAddresses
+            : JSON.stringify(savedAddresses)
+          : undefined
+
+      const notificationPrefsStr =
+        notificationPrefs !== undefined
+          ? typeof notificationPrefs === 'string'
+            ? notificationPrefs
+            : JSON.stringify(notificationPrefs)
+          : undefined
+
+      const profileData: any = {}
+      if (companyName) profileData.companyNameAr = companyName
+      if (crNumber) profileData.crNumber = crNumber
+      if (vatNumber !== undefined) profileData.vatNumber = vatNumber
+      if (businessSector !== undefined) profileData.businessSector = businessSector
+      if (headquarters !== undefined) profileData.headquarters = headquarters
+      if (jobTitle !== undefined) profileData.jobTitle = jobTitle
+      if (annualImport !== undefined) profileData.annualImport = annualImport
+      if (savedAddressesStr !== undefined) profileData.savedAddresses = savedAddressesStr
+      if (notificationPrefsStr !== undefined) profileData.notificationPrefs = notificationPrefsStr
+
+      const hasProfileUpdates = Object.keys(profileData).length > 0
 
       const updated = await prisma.user.update({
         where: { id: userId },
         data: {
-          fullName: fullName || undefined,
+          fullName: nameToUpdate || undefined,
           phone: phone || undefined,
-          companyProfile: companyName
+          companyProfile: hasProfileUpdates
             ? {
                 upsert: {
                   create: {
-                    companyNameAr: companyName,
+                    companyNameAr: companyName || 'مؤسسة تجارية',
                     crNumber: crNumber || '1010000000',
+                    ...profileData,
                   },
-                  update: {
-                    companyNameAr: companyName,
-                    crNumber: crNumber || undefined,
-                  },
+                  update: profileData,
                 },
               }
             : undefined,
@@ -135,9 +175,22 @@ export class AuthController {
         companyProfile: updated.companyProfile,
       }
 
-      return sendSuccess(res, userProfile, 'تم تحديث بيانات الملف الشخصي بنجاح')
+      return sendSuccess(res, userProfile, 'تم حفظ وتحديث البيانات في قاعدة البيانات بنجاح')
     } catch (err: any) {
       return sendError(res, err.message || 'فشل تحديث البيانات')
+    }
+  }
+
+  static async changePassword(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user?.id
+      if (!userId) return sendError(res, 'غير مصرح', 401)
+      const { currentPassword, newPassword } = req.body
+
+      await AuthService.changePassword(userId, currentPassword, newPassword)
+      return sendSuccess(res, null, 'تم تحديث كلمة المرور بنجاح في قاعدة البيانات')
+    } catch (err: any) {
+      return sendError(res, err.message || 'فشل تحديث كلمة المرور', 400)
     }
   }
 }

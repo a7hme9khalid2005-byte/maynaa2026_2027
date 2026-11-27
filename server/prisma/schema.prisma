@@ -33,20 +33,27 @@ model User {
   transfersReceived   BankTransferTransaction[] @relation("ProviderReceivedTransfers")
   reviewedTransfers   BankTransferTransaction[] @relation("AdminOrProviderReviewedTransfers")
   activityLogs        ActivityLog[]
+  documents           Document[]
 }
 
 model CompanyProfile {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  companyNameAr String
-  companyNameEn String?
-  crNumber      String   // رقم السجل التجاري
-  vatNumber     String?  // الرقم الضريبي
-  bankName      String?  // اسم بنك المزود لصرف مستحقاته
-  ibanNumber    String?  // آيبان المزود
-  isVerified    Boolean  @default(false)
-  createdAt     DateTime @default(now())
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyNameAr     String
+  companyNameEn     String?
+  crNumber          String   // رقم السجل التجاري
+  vatNumber         String?  // الرقم الضريبي
+  bankName          String?  // اسم بنك المزود لصرف مستحقاته
+  ibanNumber        String?  // آيبان المزود
+  businessSector    String?  // القطاع التجاري
+  headquarters      String?  // المقر الرئيسي
+  jobTitle          String?  // المسمى الوظيفي
+  annualImport      String?  // حجم الاستيراد السنوي
+  savedAddresses    String?  // عناوين المستودعات والتسليم بصيغة JSON
+  notificationPrefs String?  // تفضيلات الإشعارات بصيغة JSON
+  isVerified        Boolean  @default(false)
+  createdAt         DateTime @default(now())
 }
 
 // 2. الحسابات البنكية المعتمدة للمنصة (التحويل البنكي الخارجي)
@@ -221,14 +228,17 @@ model BankTransferTransaction {
 
 // 7. المستندات والوثائق الرسمية (Documents)
 model Document {
-  id         String   @id @default(uuid())
-  shipmentId String
-  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
-  docType    String   // BILL_OF_LADING, CUSTOMS_BAYAN, COMMERCIAL_INVOICE, ORIGIN_CERTIFICATE, DELIVERY_PROOF
+  id         String    @id @default(uuid())
+  shipmentId String?
+  shipment   Shipment? @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  docType    String    // BILL_OF_LADING, CUSTOMS_BAYAN, COMMERCIAL_INVOICE, ORIGIN_CERTIFICATE, DELIVERY_PROOF
+  status     String    @default("APPROVED") // APPROVED, UNDER_REVIEW, NEEDS_UPDATE
   fileUrl    String
   fileName   String
   fileSize   Int?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
 }
 
 // 8. إعدادات المنصة وسياسات العمولات (Platform Settings & Commissions)

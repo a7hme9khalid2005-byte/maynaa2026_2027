@@ -8,6 +8,8 @@ const upload_middleware_js_1 = require("../../middlewares/upload.middleware.js")
 const router = (0, express_1.Router)();
 // 1. فحص حالة الـ 3 أيام المجانية ونسبة العمولة للمستخدم
 router.get('/trial-status', auth_middleware_js_1.authenticate, finance_controller_js_1.FinanceController.getUserTrialStatus);
+router.get('/my-transfers', auth_middleware_js_1.authenticate, finance_controller_js_1.FinanceController.getMyTransfers);
+router.get('/transfers/my', auth_middleware_js_1.authenticate, finance_controller_js_1.FinanceController.getMyTransfers);
 // 2. جلب بيانات بنك المزود الخاص بالشحنة (التحويل البنكي الخارجي)
 router.get('/provider-bank/:shipmentId', auth_middleware_js_1.authenticate, finance_controller_js_1.FinanceController.getProviderBankDetails);
 // 3. رفع المستورد للإشعار الموجه لتدقيق الأدمن أولاً

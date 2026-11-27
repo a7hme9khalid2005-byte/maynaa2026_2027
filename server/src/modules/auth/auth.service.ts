@@ -136,4 +136,32 @@ export class AuthService {
       }),
     }
   }
+
+  static async changePassword(userId: string, currentPassword?: string, newPassword?: string) {
+    if (!newPassword || newPassword.length < 6) {
+      throw new Error('كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل')
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user) {
+      throw new Error('المستخدم غير موجود')
+    }
+
+    if (currentPassword) {
+      const isMatch = await bcrypt.compare(currentPassword, user.passwordHash)
+      if (!isMatch) {
+        throw new Error('كلمة المرور الحالية غير صحيحة')
+      }
+    }
+
+    const salt = await bcrypt.genSalt(10)
+    const passwordHash = await bcrypt.hash(newPassword, salt)
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    })
+
+    return true
+  }
 }

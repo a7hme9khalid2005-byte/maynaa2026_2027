@@ -105,6 +105,11 @@ export const authService = {
     }
     return data
   },
+
+  // تغيير كلمة المرور في قاعدة البيانات
+  async changePassword(currentPassword, newPassword) {
+    return api.post('/auth/change-password', { currentPassword, newPassword })
+  },
 }
 
 export default authService

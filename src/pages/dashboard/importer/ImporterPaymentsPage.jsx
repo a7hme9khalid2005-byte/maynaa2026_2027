@@ -122,10 +122,52 @@ export default function ImporterPaymentsPage() {
           })
         }
       })
-      .catch(() => {
-        // استمرار العمل بالقيم التجريبية في حال العمل بدون سيرفر
-      })
-  }, [])
+      .catch(() => {})
+
+    // جلب الحوالات الحقيقية من قاعدة بيانات Supabase إذا لم يكن حساب سارة التجريبي
+    if (!isDemoSarah) {
+      financeService.getMyTransfers()
+        .then((res) => {
+          const list = res?.data || []
+          if (Array.isArray(list)) {
+            const statusConfig = {
+              SUBMITTED_TO_ADMIN: { label: 'في انتظار تدقيق الإدارة', bg: '#FEF3C7', color: '#D97706' },
+              APPROVED_BY_ADMIN_PENDING_PROVIDER: { label: 'معتمد إدارياً - بانتظار تأكيد المزود', bg: '#E0F2FE', color: '#0284C7' },
+              CONFIRMED_BY_PROVIDER: { label: 'مؤكد من المزود ومفعّل', bg: '#E6F9F0', color: '#009F65' },
+              REJECTED_BY_ADMIN: { label: 'مرفوض من الإدارة', bg: '#FEE2E2', color: '#DC2626' },
+              REJECTED_BY_PROVIDER: { label: 'مرفوض من المزود', bg: '#FEE2E2', color: '#DC2626' },
+            }
+
+            const mapped = list.map((tx) => {
+              const conf = statusConfig[tx.status] || { label: tx.status, bg: '#F3F4F6', color: '#4B5563' }
+              const symbol = tx.currency === 'DINAR' ? 'د.أ' : tx.currency === 'EUR' ? '€' : '$'
+              const formattedAmt = tx.currency === 'USD'
+                ? `$${(tx.transferAmount || 0).toLocaleString()}`
+                : `${(tx.transferAmount || 0).toLocaleString()} ${symbol}`
+
+              return {
+                id: tx.transferRefNumber || `TRX-${tx.id.substring(0, 6)}`,
+                date: (tx.transferDate || tx.createdAt || '').split('T')[0],
+                description: `سداد شحنة ${tx.invoice?.shipment?.trackingNumber || 'لوجستية'} (تحويل بنكي خارجي)`,
+                currency: tx.currency || 'USD',
+                currencySymbol: symbol,
+                subtotal: tx.subtotalAmount || 0,
+                commissionRate: tx.commissionRate || 0,
+                commissionAmount: tx.commissionAmount || 0,
+                isTrial: tx.isTrialPeriod,
+                amount: formattedAmt,
+                amountNum: tx.transferAmount || 0,
+                status: conf.label,
+                statusBg: conf.bg,
+                statusColor: conf.color,
+              }
+            })
+            setTransactions(mapped)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [isDemoSarah])
 
   // بيانات نموذج التحويل البنكي الخارجي
   const [transferData, setTransferData] = useState(() => ({

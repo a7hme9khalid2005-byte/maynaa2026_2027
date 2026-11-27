@@ -8,6 +8,8 @@ const router = Router()
 
 // 1. فحص حالة الـ 3 أيام المجانية ونسبة العمولة للمستخدم
 router.get('/trial-status', authenticate, FinanceController.getUserTrialStatus)
+router.get('/my-transfers', authenticate, FinanceController.getMyTransfers)
+router.get('/transfers/my', authenticate, FinanceController.getMyTransfers)
 
 // 2. جلب بيانات بنك المزود الخاص بالشحنة (التحويل البنكي الخارجي)
 router.get('/provider-bank/:shipmentId', authenticate, FinanceController.getProviderBankDetails)

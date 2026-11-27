@@ -19,4 +19,6 @@ router.post('/profile', auth_middleware_js_1.authenticate, auth_controller_js_1.
 router.put('/me', auth_middleware_js_1.authenticate, auth_controller_js_1.AuthController.updateProfile);
 router.patch('/me', auth_middleware_js_1.authenticate, auth_controller_js_1.AuthController.updateProfile);
 router.post('/me', auth_middleware_js_1.authenticate, auth_controller_js_1.AuthController.updateProfile);
+router.post('/change-password', auth_middleware_js_1.authenticate, auth_controller_js_1.AuthController.changePassword);
+router.put('/change-password', auth_middleware_js_1.authenticate, auth_controller_js_1.AuthController.changePassword);
 exports.default = router;

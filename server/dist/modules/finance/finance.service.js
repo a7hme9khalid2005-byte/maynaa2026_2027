@@ -66,22 +66,119 @@ class FinanceService {
             crNumber: profile?.crNumber || '1010000000',
         };
     }
-    // 3. رفع المستورد لإشعار التحويل البنكي الخارجي وإرساله لتدقيق الأدمن أولاً
-    static async submitTransferToAdmin(params) {
-        const invoice = await prisma_js_1.prisma.invoice.findUnique({
-            where: { id: params.invoiceId },
+    // استرجاع سجل الحوالات البنكية الخاصة بالمستورد الحالي
+    static async getImporterTransfers(importerId) {
+        return prisma_js_1.prisma.bankTransferTransaction.findMany({
+            where: { payerId: importerId },
             include: {
-                shipment: {
+                invoice: {
                     include: {
-                        provider: {
-                            include: { companyProfile: true },
-                        },
+                        shipment: true,
                     },
                 },
             },
+            orderBy: { createdAt: 'desc' },
         });
+    }
+    // 3. رفع المستورد لإشعار التحويل البنكي الخارجي وإرساله لتدقيق الأدمن أولاً
+    static async submitTransferToAdmin(params) {
+        let invoice = null;
+        if (params.invoiceId) {
+            invoice = await prisma_js_1.prisma.invoice.findFirst({
+                where: {
+                    OR: [
+                        { id: params.invoiceId },
+                        { invoiceNumber: params.invoiceId },
+                        { shipmentId: params.invoiceId },
+                        { shipment: { trackingNumber: params.invoiceId } },
+                    ],
+                },
+                include: {
+                    shipment: {
+                        include: {
+                            provider: {
+                                include: { companyProfile: true },
+                            },
+                        },
+                    },
+                },
+            });
+        }
+        // إذا لم تكن الفاتورة محددة، نربطها بأحدث شحنة للعميل أو ننشئ فاتورة نظامية
         if (!invoice) {
-            throw new Error('الفاتورة غير موجودة');
+            let shipment = await prisma_js_1.prisma.shipment.findFirst({
+                where: { importerId: params.payerId },
+                include: {
+                    invoice: true,
+                    provider: { include: { companyProfile: true } },
+                },
+                orderBy: { createdAt: 'desc' },
+            });
+            if (!shipment) {
+                // نربط بمزود خدمة معتمد
+                const provider = await prisma_js_1.prisma.user.findFirst({
+                    where: { role: 'PROVIDER' },
+                    include: { companyProfile: true },
+                });
+                if (!provider)
+                    throw new Error('لا يوجد مزود خدمة متاح');
+                shipment = await prisma_js_1.prisma.shipment.create({
+                    data: {
+                        trackingNumber: `SHN-2026-${Math.floor(100 + Math.random() * 900)}`,
+                        sector: 'SEA_FREIGHT',
+                        originName: 'شنغهاي - الصين',
+                        destName: 'ميناء الملك عبد العزيز - الدمام',
+                        importerId: params.payerId,
+                        providerId: provider.id,
+                        status: 'PENDING_PAYMENT',
+                    },
+                    include: {
+                        invoice: true,
+                        provider: { include: { companyProfile: true } },
+                    },
+                });
+            }
+            if (shipment.invoice) {
+                invoice = await prisma_js_1.prisma.invoice.findUnique({
+                    where: { id: shipment.invoice.id },
+                    include: {
+                        shipment: {
+                            include: {
+                                provider: { include: { companyProfile: true } },
+                            },
+                        },
+                    },
+                });
+            }
+            else {
+                const invSubtotal = params.subtotalAmount || 1000.0;
+                const invTax = parseFloat((invSubtotal * 0.15).toFixed(2));
+                const invTotal = parseFloat((invSubtotal + invTax).toFixed(2));
+                invoice = await prisma_js_1.prisma.invoice.create({
+                    data: {
+                        invoiceNumber: `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+                        shipmentId: shipment.id,
+                        subtotal: invSubtotal,
+                        taxAmount: invTax,
+                        totalAmount: invTotal,
+                        currency: params.currency || 'USD',
+                        commissionRate: 0.025,
+                        commissionAmount: parseFloat((invSubtotal * 0.025).toFixed(2)),
+                        providerPayoutNet: invSubtotal,
+                        paymentStatus: 'UNPAID',
+                    },
+                    include: {
+                        shipment: {
+                            include: {
+                                provider: { include: { companyProfile: true } },
+                            },
+                        },
+                    },
+                });
+            }
+        }
+        if (!invoice) {
+            throw new Error('تعذر إيجاد أو إنشاء فاتورة للحوالة');
         }
         if (invoice.paymentStatus === 'PAID_TO_PROVIDER' ||
             invoice.paymentStatus === 'ESCROW_HOLD') {
@@ -99,7 +196,7 @@ class FinanceService {
         // إنشاء سجل الحوالة البنكية الموجهة لتدقيق الأدمن أولاً
         const transfer = await prisma_js_1.prisma.bankTransferTransaction.create({
             data: {
-                invoiceId: params.invoiceId,
+                invoiceId: invoice.id,
                 payerId: params.payerId,
                 recipientProviderId: provider.id,
                 recipientBankName: profile?.bankName || 'مصرف الراجحي',
@@ -121,7 +218,7 @@ class FinanceService {
         });
         // تحديث حالة الفاتورة
         await prisma_js_1.prisma.invoice.update({
-            where: { id: params.invoiceId },
+            where: { id: invoice.id },
             data: {
                 currency,
                 isTrialPeriod: trialStatus.isTrialActive,

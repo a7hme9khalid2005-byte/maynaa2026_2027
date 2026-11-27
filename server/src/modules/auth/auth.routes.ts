@@ -24,5 +24,7 @@ router.post('/profile', authenticate, AuthController.updateProfile)
 router.put('/me', authenticate, AuthController.updateProfile)
 router.patch('/me', authenticate, AuthController.updateProfile)
 router.post('/me', authenticate, AuthController.updateProfile)
+router.post('/change-password', authenticate, AuthController.changePassword)
+router.put('/change-password', authenticate, AuthController.changePassword)
 
 export default router

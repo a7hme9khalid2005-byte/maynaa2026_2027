@@ -6,6 +6,11 @@ export const financeService = {
     return api.get('/finance/trial-status')
   },
 
+  // استرجاع سجل الحوالات البنكية للمستورد الحالي
+  async getMyTransfers() {
+    return api.get('/finance/my-transfers')
+  },
+
   // 2. جلب بيانات الحساب البنكي لمزود الخدمة الخاص بالشحنة (الآيبان)
   async getProviderBank(shipmentId) {
     return api.get(`/finance/provider-bank/${shipmentId}`)

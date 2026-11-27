@@ -1,9 +1,11 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import ImporterSidebar from '../../../components/dashboard/ImporterSidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import { useNotifications } from '../../../context/NotificationContext'
 import { useAuth } from '../../../context/AuthContext'
 import authService from '../../../services/authService'
+import api from '../../../services/api'
 import {
   DollarSign,
   Clock,
@@ -37,9 +39,42 @@ const monthlySpendingData = [
 
 export default function ImporterDashboard() {
   const { openNotifications } = useNotifications()
-  const { user: authUser } = useAuth() || {}
-  const currentUser = authUser || authService.getCurrentUser()
+  const { user: authUser, setUser } = useAuth() || {}
+  const [dbUser, setDbUser] = useState(null)
+  const [liveShipmentsCount, setLiveShipmentsCount] = useState(null)
+  const [liveRfqCount, setLiveRfqCount] = useState(null)
 
+  useEffect(() => {
+    // 1. قراءة بيانات المستخدم الحية من قاعدة البيانات
+    authService.getProfile()
+      .then((res) => {
+        if (res?.data) {
+          setDbUser(res.data)
+          if (setUser) setUser(res.data)
+        }
+      })
+      .catch(() => {})
+
+    // 2. قراءة الشحنات النشطة من قاعدة البيانات
+    api.get('/shipments')
+      .then((res) => {
+        if (Array.isArray(res?.data)) {
+          setLiveShipmentsCount(res.data.filter((s) => s.status !== 'DELIVERED').length)
+        }
+      })
+      .catch(() => {})
+
+    // 3. قراءة طلبات عروض الأسعار من قاعدة البيانات
+    api.get('/rfq/market')
+      .then((res) => {
+        if (Array.isArray(res?.data)) {
+          setLiveRfqCount(res.data.length)
+        }
+      })
+      .catch(() => {})
+  }, [setUser])
+
+  const currentUser = dbUser || authUser || authService.getCurrentUser()
   const isDemoSarah = currentUser?.email === 'importer@meynaa.com'
   const displayName = currentUser?.fullName || (isDemoSarah ? 'سارة الزاهرني' : 'العميل العزيز')
   const displayCompany = currentUser?.companyName || currentUser?.companyProfile?.companyNameAr || (isDemoSarah ? 'مجموعة الريادة للمقاولات' : 'منشأة تجارية معتمدة')
@@ -221,7 +256,7 @@ export default function ImporterDashboard() {
             {/* Middle & Bottom Content */}
             <div className="relative z-10">
               <div className="text-3xl font-black text-[#011222] tracking-tight">
-                {isDemoSarah ? '12' : '0'}
+                {isDemoSarah ? '12' : (liveShipmentsCount !== null ? liveShipmentsCount : '0')}
               </div>
               <div className="text-sm font-bold text-[#475569] mt-1">شحنات نشطة</div>
               <div className="text-xs font-semibold text-[#94A3B8] mt-0.5">
@@ -365,20 +400,20 @@ export default function ImporterDashboard() {
 
             {/* 4 Big Metric Boxes in a 2x2 Grid */}
             <div className="grid grid-cols-2 gap-4 flex-1">
-              {/* Top-Right: 12 في الطريق (Peach / Light Orange) */}
+              {/* Top-Right: في الطريق (Peach / Light Orange) */}
               <div className="bg-[#FFF3EA] rounded-2xl p-6 flex flex-col items-center justify-center text-center">
                 <span className="text-3xl lg:text-4xl font-black text-[#FB8731] leading-tight">
-                  {isDemoSarah ? '12' : '0'}
+                  {isDemoSarah ? '12' : (liveShipmentsCount !== null ? liveShipmentsCount : '0')}
                 </span>
                 <span className="text-sm font-bold text-[#475569] mt-1">
                   في الطريق
                 </span>
               </div>
 
-              {/* Top-Left: 3 طلبات مفتوحة (Light Blue) */}
+              {/* Top-Left: طلبات مفتوحة (Light Blue) */}
               <div className="bg-[#EBF5FE] rounded-2xl p-6 flex flex-col items-center justify-center text-center">
                 <span className="text-3xl lg:text-4xl font-black text-[#0284C7] leading-tight">
-                  {isDemoSarah ? '3' : '0'}
+                  {isDemoSarah ? '3' : (liveRfqCount !== null ? liveRfqCount : '0')}
                 </span>
                 <span className="text-sm font-bold text-[#475569] mt-1">
                   طلبات مفتوحة

@@ -3,6 +3,7 @@ import { AuthService } from './auth.service.js'
 import { sendSuccess, sendError } from '../../utils/response.util.js'
 import { AuthRequest } from '../../middlewares/auth.middleware.js'
 import { sendOtpEmail } from '../../utils/mail.util.js'
+import { prisma } from '../../config/prisma.js'
 
 // مخزن مؤقت لرموز التحقق في الذاكرة (Email -> { code, expiresAt })
 const otpStore = new Map<string, { code: string; expiresAt: number }>()
@@ -90,5 +91,53 @@ export class AuthController {
 
   static async me(req: AuthRequest, res: Response) {
     return sendSuccess(res, req.user, 'تم استرجاع بيانات الحساب بنجاح')
+  }
+
+  static async updateProfile(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user?.id
+      if (!userId) return sendError(res, 'غير مصرح', 401)
+
+      const { fullName, phone, companyName, crNumber } = req.body
+
+      const updated = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          fullName: fullName || undefined,
+          phone: phone || undefined,
+          companyProfile: companyName
+            ? {
+                upsert: {
+                  create: {
+                    companyNameAr: companyName,
+                    crNumber: crNumber || '1010000000',
+                  },
+                  update: {
+                    companyNameAr: companyName,
+                    crNumber: crNumber || undefined,
+                  },
+                },
+              }
+            : undefined,
+        },
+        include: { companyProfile: true },
+      })
+
+      const userProfile = {
+        id: updated.id,
+        email: updated.email,
+        phone: updated.phone,
+        role: updated.role,
+        fullName: updated.fullName,
+        status: updated.status,
+        companyName: updated.companyProfile?.companyNameAr || '',
+        crNumber: updated.companyProfile?.crNumber || '',
+        companyProfile: updated.companyProfile,
+      }
+
+      return sendSuccess(res, userProfile, 'تم تحديث بيانات الملف الشخصي بنجاح')
+    } catch (err: any) {
+      return sendError(res, err.message || 'فشل تحديث البيانات')
+    }
   }
 }

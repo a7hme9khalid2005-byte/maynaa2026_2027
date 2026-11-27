@@ -29,9 +29,22 @@ export const authService = {
     return res
   },
 
-  // جلب الملف الشخصي للمستخدم الحالي
+  // جلب الملف الشخصي للمستخدم الحالي من قاعدة البيانات
   async getProfile() {
     return api.get('/auth/profile')
+  },
+
+  // تحديث الملف الشخصي للمستخدم في قاعدة البيانات
+  async updateProfile(data) {
+    const res = await api.put('/auth/profile', data)
+    const user = res?.data
+    if (user) {
+      const current = this.getCurrentUser() || {}
+      const merged = { ...current, ...user }
+      localStorage.setItem('meynaa_user', JSON.stringify(merged))
+      window.dispatchEvent(new Event('storage'))
+    }
+    return res
   },
 
   // تسجيل الخروج

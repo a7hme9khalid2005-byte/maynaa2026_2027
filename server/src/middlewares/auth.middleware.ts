@@ -8,8 +8,13 @@ export interface AuthRequest extends Request {
   user?: {
     id: string
     email: string
+    phone?: string
     role: string
     fullName: string
+    status?: string
+    companyName?: string
+    crNumber?: string
+    companyProfile?: any
   }
 }
 
@@ -30,7 +35,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      select: { id: true, email: true, role: true, fullName: true, status: true },
+      include: { companyProfile: true },
     })
 
     if (!user || user.status === 'BLOCKED' || user.status === 'SUSPENDED') {
@@ -40,8 +45,13 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     req.user = {
       id: user.id,
       email: user.email,
+      phone: user.phone,
       role: user.role,
       fullName: user.fullName,
+      status: user.status,
+      companyName: user.companyProfile?.companyNameAr || '',
+      crNumber: user.companyProfile?.crNumber || '',
+      companyProfile: user.companyProfile,
     }
 
     next()

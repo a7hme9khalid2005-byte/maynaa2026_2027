@@ -17,5 +17,8 @@ router.post('/send-otp', AuthController.sendOtp)
 router.post('/verify-otp', validate(VerifyOtpSchema), AuthController.verifyOtp)
 router.post('/forgot-password', validate(ForgotPasswordSchema), AuthController.forgotPassword)
 router.get('/me', authenticate, AuthController.me)
+router.get('/profile', authenticate, AuthController.me)
+router.put('/profile', authenticate, AuthController.updateProfile)
+router.put('/me', authenticate, AuthController.updateProfile)
 
 export default router

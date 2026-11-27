@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import ImporterSidebar from '../../../components/dashboard/ImporterSidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
@@ -6,6 +6,7 @@ import TruckTrackingMap from '../../../components/dashboard/TruckTrackingMap'
 import { useNotifications } from '../../../context/NotificationContext'
 import { useAuth } from '../../../context/AuthContext'
 import authService from '../../../services/authService'
+import api from '../../../services/api'
 import {
   Ship,
   Search,
@@ -93,8 +94,33 @@ export default function ImporterShipmentsPage() {
   const [selectedTruckShipment, setSelectedTruckShipment] = useState('SHN-2026-884')
 
   const filterOptions = ['جميع الحالات', 'قيد الشحن', 'في الجمارك', 'مُسلمة', 'مؤجلة']
+  const [dbShipments, setDbShipments] = useState([])
 
-  const activeShipmentsList = isDemoSarah ? allShipments : []
+  // قراءة الشحنات الحية الخاصة بالعميل من قاعدة بيانات Supabase
+  useEffect(() => {
+    if (isDemoSarah) return
+    api.get('/shipments')
+      .then((res) => {
+        if (Array.isArray(res?.data) && res.data.length > 0) {
+          const mapped = res.data.map((s) => ({
+            id: s.trackingNumber || s.id,
+            origin: s.originAddress || 'ميناء المنشأ',
+            destination: s.destinationAddress || 'مستودع الوجهة',
+            provider: s.provider?.fullName || 'شركة الشحن المعتمدة',
+            route: `${s.originAddress || 'المصدر'} ← ${s.destinationAddress || 'الوجهة'}`,
+            status: s.status === 'DELIVERED' ? 'مُسلمة' : s.status === 'IN_TRANSIT' ? 'قيد الشحن' : s.status === 'CUSTOMS' ? 'في الجمارك' : 'قيد الشحن',
+            type: s.transportType === 'SEA' ? 'بحري FCL' : s.transportType === 'AIR' ? 'جوي سريع' : 'بري',
+            eta: s.etaDate ? new Date(s.etaDate).toLocaleDateString('ar-SA') : 'خلال 4 أيام',
+            price: s.invoice?.totalAmount ? `$${s.invoice.totalAmount.toLocaleString()}` : '$12,500',
+            progress: s.status === 'DELIVERED' ? 100 : s.status === 'CUSTOMS' ? 80 : 50,
+          }))
+          setDbShipments(mapped)
+        }
+      })
+      .catch(() => {})
+  }, [isDemoSarah])
+
+  const activeShipmentsList = isDemoSarah ? allShipments : dbShipments
 
   const filtered = activeShipmentsList.filter((item) => {
     const matchesSearch =

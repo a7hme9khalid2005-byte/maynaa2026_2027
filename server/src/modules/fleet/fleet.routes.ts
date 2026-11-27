@@ -13,6 +13,6 @@ router.post('/telemetry', authenticate, FleetController.updateTelemetry)
 
 // التنبيهات وإغلاقها
 router.get('/alerts', authenticate, FleetController.getActiveAlerts)
-router.patch('/alerts/:id/resolve', authenticate, requireRole('SUPER_ADMIN'), FleetController.resolveAlert)
+router.patch('/alerts/:id/resolve', authenticate, requireRole('SUPER_ADMIN', 'ADMIN'), FleetController.resolveAlert)
 
 export default router

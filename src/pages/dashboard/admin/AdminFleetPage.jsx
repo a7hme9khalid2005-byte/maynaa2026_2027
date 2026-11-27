@@ -394,6 +394,8 @@ export default function AdminFleetPage() {
           : a
       )
     )
+    // حفظ حل التنبيه تلقائياً في قاعدة البيانات
+    api.patch(`/fleet/alerts/${id}/resolve`).catch(() => {})
   }
 
   const markAllAlertsResolved = () => {
@@ -408,6 +410,11 @@ export default function AdminFleetPage() {
         textColor: '#16A34A'
       }))
     )
+    alerts.forEach((a) => {
+      if (a.status === 'active') {
+        api.patch(`/fleet/alerts/${a.id}/resolve`).catch(() => {})
+      }
+    })
   }
 
   // Scroll to map and trigger focus on target truck

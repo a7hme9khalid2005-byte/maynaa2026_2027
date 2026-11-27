@@ -37,6 +37,16 @@ class AdminController {
             return (0, response_util_js_1.sendError)(res, err.message);
         }
     }
+    static async updatePolicy(req, res) {
+        try {
+            const { termsText, privacyText } = req.body;
+            const updated = await admin_service_js_1.AdminService.updatePolicy({ termsText, privacyText });
+            return (0, response_util_js_1.sendSuccess)(res, updated, 'تم تحديث نصوص السياسات والشروط بنجاح');
+        }
+        catch (err) {
+            return (0, response_util_js_1.sendError)(res, err.message);
+        }
+    }
     static async search(req, res) {
         try {
             const { q } = req.query;
@@ -62,6 +72,16 @@ class AdminController {
             const { status } = req.body;
             const updated = await admin_service_js_1.AdminService.updateUserStatus(id, status);
             return (0, response_util_js_1.sendSuccess)(res, updated, 'تم تحديث حالة المستخدم بنجاح');
+        }
+        catch (err) {
+            return (0, response_util_js_1.sendError)(res, err.message);
+        }
+    }
+    static async deleteUser(req, res) {
+        try {
+            const { id } = req.params;
+            await admin_service_js_1.AdminService.deleteUser(id);
+            return (0, response_util_js_1.sendSuccess)(res, null, 'تم حذف المستخدم من قاعدة البيانات بنجاح');
         }
         catch (err) {
             return (0, response_util_js_1.sendError)(res, err.message);

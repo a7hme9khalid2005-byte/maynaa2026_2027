@@ -36,6 +36,16 @@ export class AdminController {
     }
   }
 
+  static async updatePolicy(req: Request, res: Response) {
+    try {
+      const { termsText, privacyText } = req.body
+      const updated = await AdminService.updatePolicy({ termsText, privacyText })
+      return sendSuccess(res, updated, 'تم تحديث نصوص السياسات والشروط بنجاح')
+    } catch (err: any) {
+      return sendError(res, err.message)
+    }
+  }
+
   static async search(req: Request, res: Response) {
     try {
       const { q } = req.query as { q?: string }
@@ -61,6 +71,16 @@ export class AdminController {
       const { status } = req.body
       const updated = await AdminService.updateUserStatus(id, status)
       return sendSuccess(res, updated, 'تم تحديث حالة المستخدم بنجاح')
+    } catch (err: any) {
+      return sendError(res, err.message)
+    }
+  }
+
+  static async deleteUser(req: Request, res: Response) {
+    try {
+      const { id } = req.params
+      await AdminService.deleteUser(id)
+      return sendSuccess(res, null, 'تم حذف المستخدم من قاعدة البيانات بنجاح')
     } catch (err: any) {
       return sendError(res, err.message)
     }

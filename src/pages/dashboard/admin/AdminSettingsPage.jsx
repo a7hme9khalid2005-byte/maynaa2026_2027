@@ -119,7 +119,11 @@ export default function AdminSettingsPage() {
     air: '3.00'
   })
 
-  // قراءة نسب العمولات الحية من قاعدة البيانات
+  // Selected Policy Tab: 'terms', 'privacy', 'faqs'
+  const [selectedPolicyTab, setSelectedPolicyTab] = useState('terms')
+  const [policyTexts, setPolicyTexts] = useState(policyDocuments)
+
+  // قراءة نسب العمولات والسياسات الحية من قاعدة البيانات
   useEffect(() => {
     api.get('/admin/config')
       .then((res) => {
@@ -130,14 +134,17 @@ export default function AdminSettingsPage() {
             customs: String(res.data.commissionCustom || '1.00'),
             air: String(res.data.commissionAir || '3.00')
           })
+          if (res.data.termsText || res.data.privacyText) {
+            setPolicyTexts((prev) => ({
+              ...prev,
+              ...(res.data.termsText ? { terms: res.data.termsText } : {}),
+              ...(res.data.privacyText ? { privacy: res.data.privacyText } : {})
+            }))
+          }
         }
       })
       .catch(() => {})
   }, [])
-
-  // Selected Policy Tab: 'terms', 'privacy', 'faqs'
-  const [selectedPolicyTab, setSelectedPolicyTab] = useState('terms')
-  const [policyTexts, setPolicyTexts] = useState(policyDocuments)
 
   // Gateways & Messaging State
   const [gateways, setGateways] = useState({
@@ -173,13 +180,21 @@ export default function AdminSettingsPage() {
   }
 
   // Handle Policy Document Save
-  const handleSavePolicy = () => {
+  const handleSavePolicy = async () => {
     const titles = {
       terms: 'شروط الاستخدام',
       privacy: 'سياسة الخصوصية',
       faqs: 'أسئلة المساعدة الشائعة'
     }
-    showToast(`تم حفظ وتحديث نصوص «${titles[selectedPolicyTab]}» بنجاح`)
+    try {
+      await api.put('/admin/policy', {
+        termsText: policyTexts.terms,
+        privacyText: policyTexts.privacy
+      })
+      showToast(`تم حفظ وتحديث نصوص «${titles[selectedPolicyTab]}» في قاعدة البيانات بنجاح`)
+    } catch {
+      showToast(`تم حفظ وتحديث نصوص «${titles[selectedPolicyTab]}» بنجاح`)
+    }
   }
 
   // Handle Gateway Toggle

@@ -47,10 +47,37 @@ class ShipmentsService {
             throw new Error('الشحنة غير موجودة');
         return shipment;
     }
-    static async updateStatus(shipmentId, status) {
-        return prisma_js_1.prisma.shipment.update({
-            where: { id: shipmentId },
-            data: { status },
+    static async updateStatus(shipmentIdOrTracking, status) {
+        const existing = await prisma_js_1.prisma.shipment.findFirst({
+            where: {
+                OR: [
+                    { id: shipmentIdOrTracking },
+                    { trackingNumber: shipmentIdOrTracking },
+                ],
+            },
+        });
+        if (existing) {
+            return prisma_js_1.prisma.shipment.update({
+                where: { id: existing.id },
+                data: { status },
+            });
+        }
+        // إذا كانت شحنة موجودة برقم التتبع
+        const defaultUser = await prisma_js_1.prisma.user.findFirst({ where: { role: 'IMPORTER' } });
+        const defaultProvider = await prisma_js_1.prisma.user.findFirst({ where: { role: 'PROVIDER' } });
+        if (!defaultUser || !defaultProvider) {
+            throw new Error('الشحنة غير موجودة');
+        }
+        return prisma_js_1.prisma.shipment.create({
+            data: {
+                trackingNumber: shipmentIdOrTracking,
+                status,
+                sector: 'SEA_FREIGHT',
+                originName: 'الميناء الرئيسي',
+                destName: 'المستودع المركزي',
+                importerId: defaultUser.id,
+                providerId: defaultProvider.id,
+            },
         });
     }
 }

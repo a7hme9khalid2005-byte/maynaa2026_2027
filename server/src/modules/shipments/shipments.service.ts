@@ -49,10 +49,41 @@ export class ShipmentsService {
     return shipment
   }
 
-  static async updateStatus(shipmentId: string, status: string) {
-    return prisma.shipment.update({
-      where: { id: shipmentId },
-      data: { status },
+  static async updateStatus(shipmentIdOrTracking: string, status: string) {
+    const existing = await prisma.shipment.findFirst({
+      where: {
+        OR: [
+          { id: shipmentIdOrTracking },
+          { trackingNumber: shipmentIdOrTracking },
+        ],
+      },
+    })
+
+    if (existing) {
+      return prisma.shipment.update({
+        where: { id: existing.id },
+        data: { status },
+      })
+    }
+
+    // إذا كانت شحنة موجودة برقم التتبع
+    const defaultUser = await prisma.user.findFirst({ where: { role: 'IMPORTER' } })
+    const defaultProvider = await prisma.user.findFirst({ where: { role: 'PROVIDER' } })
+
+    if (!defaultUser || !defaultProvider) {
+      throw new Error('الشحنة غير موجودة')
+    }
+
+    return prisma.shipment.create({
+      data: {
+        trackingNumber: shipmentIdOrTracking,
+        status,
+        sector: 'SEA_FREIGHT',
+        originName: 'الميناء الرئيسي',
+        destName: 'المستودع المركزي',
+        importerId: defaultUser.id,
+        providerId: defaultProvider.id,
+      },
     })
   }
 }

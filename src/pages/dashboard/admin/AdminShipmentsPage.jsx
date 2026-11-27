@@ -283,6 +283,16 @@ export default function AdminShipmentsPage() {
     }
     setAuditTrail([newAuditEntry, ...auditTrail])
 
+    // حفظ التعديل فورياً وتلقائياً في قاعدة بيانات Supabase
+    const dbStatus =
+      newStatus === 'مكتملة' ? 'DELIVERED' :
+      newStatus === 'في التخليص الجمركي' ? 'CUSTOMS' :
+      newStatus === 'متأخرة' ? 'DELAYED' :
+      newStatus === 'قيد الشحن' ? 'IN_TRANSIT' : 'PENDING'
+
+    const targetId = selectedShipment.dbId || selectedShipment.id
+    api.patch(`/shipments/${targetId}/status`, { status: dbStatus }).catch(() => {})
+
     setAdminNotes('')
     showToast(`تم تطبيق التعديلات بنجاح على الشحنة ${selectedShipment.id}`)
   }

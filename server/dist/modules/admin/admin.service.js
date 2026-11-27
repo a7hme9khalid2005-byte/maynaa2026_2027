@@ -74,6 +74,22 @@ class AdminService {
             },
         });
     }
+    // تحديث سياسات المنصة والشروط في قاعدة البيانات
+    static async updatePolicy(params) {
+        return prisma_js_1.prisma.platformConfig.upsert({
+            where: { id: 'global-config' },
+            update: params,
+            create: {
+                id: 'global-config',
+                commissionSea: 2.5,
+                commissionAir: 3.0,
+                commissionLand: 1.5,
+                commissionCustom: 1.0,
+                vatPercentage: 15.0,
+                ...params,
+            },
+        });
+    }
     // 3. محرك البحث الشامل والسريع في المنصة (Global Platform Search)
     static async globalSearch(term) {
         const q = term.trim();
@@ -128,6 +144,12 @@ class AdminService {
             where: { id: userId },
             data: { status: status },
             include: { companyProfile: true },
+        });
+    }
+    // 6. حذف مستخدم من قاعدة البيانات
+    static async deleteUser(userId) {
+        return prisma_js_1.prisma.user.delete({
+            where: { id: userId },
         });
     }
 }

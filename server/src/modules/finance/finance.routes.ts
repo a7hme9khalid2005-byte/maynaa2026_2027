@@ -28,32 +28,32 @@ router.post(
   FinanceController.submitTransferToAdmin
 )
 
-// 4. مسارات تدقيق واعتماد الأدمن (Super Admin)
+// 4. مسارات تدقيق واعتماد الأدمن (Super Admin & Admin)
 router.get(
   '/admin/pending-transfers',
   authenticate,
-  requireRole('SUPER_ADMIN'),
+  requireRole('SUPER_ADMIN', 'ADMIN'),
   FinanceController.getAdminPendingTransfers
 )
 
 router.post(
   '/admin/transfers/:id/approve',
   authenticate,
-  requireRole('SUPER_ADMIN'),
+  requireRole('SUPER_ADMIN', 'ADMIN'),
   FinanceController.approveTransferByAdmin
 )
 
 router.post(
   '/admin/transfers/:id/reject',
   authenticate,
-  requireRole('SUPER_ADMIN'),
+  requireRole('SUPER_ADMIN', 'ADMIN'),
   FinanceController.rejectTransferByAdmin
 )
 
 router.get(
   '/admin/all-direct-transfers',
   authenticate,
-  requireRole('SUPER_ADMIN'),
+  requireRole('SUPER_ADMIN', 'ADMIN'),
   FinanceController.getAllDirectTransfers
 )
 

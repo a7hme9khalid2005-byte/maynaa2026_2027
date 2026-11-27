@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 import authService from '../../services/authService.js'
 import {
   ShieldCheck,
@@ -24,6 +25,7 @@ export default function OtpVerificationPage() {
   const inputRefs = useRef([])
   const navigate = useNavigate()
   const location = useLocation()
+  const { setUser } = useAuth() || {}
 
   // Data passed from Register Page
   const accountType = location.state?.accountType || 'importer'
@@ -146,16 +148,24 @@ export default function OtpVerificationPage() {
       let userToStore = null
       try {
         const regRes = await authService.register(registrationPayload)
-        if (regRes?.data?.token?.accessToken) {
-          localStorage.setItem('meynaa_token', regRes.data.token.accessToken)
-          localStorage.setItem('meynaa_refresh_token', regRes.data.token.refreshToken)
-          userToStore = regRes.data.user
+        const token = regRes?.data?.token?.accessToken || regRes?.data?.accessToken || regRes?.token?.accessToken
+        const refreshToken = regRes?.data?.token?.refreshToken || regRes?.data?.refreshToken || regRes?.token?.refreshToken
+        if (token) {
+          localStorage.setItem('meynaa_token', token)
+          if (refreshToken) localStorage.setItem('meynaa_refresh_token', refreshToken)
         }
+        userToStore = regRes?.data?.user || regRes?.user || regRes?.data
       } catch (regErr) {
         console.warn('Registration note:', regErr.message)
+        try {
+          const loginRes = await authService.login(registrationPayload.email, registrationPayload.password)
+          userToStore = loginRes?.data?.user || loginRes?.user
+        } catch (loginErr) {
+          console.warn('Login attempt note:', loginErr.message)
+        }
       }
 
-      // ضمان حفظ كافة بيانات ملف العميل المسجلة حديثاً في الذاكرة المحلية
+      // ضمان حفظ كافة بيانات ملف العميل المسجلة حديثاً في الذاكرة المحلية والـ Context
       const activeUserData = {
         ...(userToStore || {}),
         fullName: registrationPayload.fullName,
@@ -169,6 +179,7 @@ export default function OtpVerificationPage() {
         status: 'ACTIVE'
       }
       localStorage.setItem('meynaa_user', JSON.stringify(activeUserData))
+      if (setUser) setUser(activeUserData)
 
       // إشعار التطبيق بتحديث الجلسة
       window.dispatchEvent(new Event('storage'))

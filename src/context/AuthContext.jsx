@@ -29,6 +29,13 @@ export function AuthProvider({ children }) {
     }
 
     verifyUser()
+
+    const handleStorageChange = () => {
+      setUser(authService.getCurrentUser())
+      setToken(localStorage.getItem('meynaa_token') || null)
+    }
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
 
   const login = async (email, password) => {
@@ -66,6 +73,7 @@ export function AuthProvider({ children }) {
     login,
     register,
     logout,
+    setUser,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

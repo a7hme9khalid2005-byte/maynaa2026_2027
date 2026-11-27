@@ -109,7 +109,7 @@ export default function ImporterRFQPage() {
   const { openNotifications } = useNotifications()
   const { user: authUser } = useAuth() || {}
   const currentUser = authUser || authService.getCurrentUser()
-  const isDemoSarah = !currentUser || currentUser.email === 'importer@meynaa.com'
+  const isDemoSarah = currentUser?.email === 'importer@meynaa.com'
 
   const [activeTab, setActiveTab] = useState('الكل')
   const [rfqList, setRfqList] = useState(() => {

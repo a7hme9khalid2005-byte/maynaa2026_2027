@@ -112,7 +112,7 @@ export default function ImporterDocumentsPage() {
   const { openNotifications } = useNotifications()
   const { user: authUser } = useAuth() || {}
   const currentUser = authUser || authService.getCurrentUser()
-  const isDemoSarah = !currentUser || currentUser.email === 'importer@meynaa.com'
+  const isDemoSarah = currentUser?.email === 'importer@meynaa.com'
 
   const [searchTerm, setSearchTerm] = useState('')
   const fileInputRef = useRef(null)

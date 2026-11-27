@@ -20,7 +20,40 @@ export class AuthService {
     })
 
     if (existing) {
-      throw new Error('البريد الإلكتروني أو رقم الجوال مسجل مسبقاً في المنصة')
+      // إذا كان المستخدم موجوداً مسبقاً، نقوم بتحديث بياناته وتسجيل دخوله مباشرة لضمان عدم تعطل تجربته
+      const salt = await bcrypt.genSalt(10)
+      const passwordHash = data.password ? await bcrypt.hash(data.password, salt) : existing.passwordHash
+
+      const updatedUser = await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          fullName: data.fullName || existing.fullName,
+          phone: data.phone || existing.phone,
+          passwordHash,
+          role: data.role || existing.role,
+          status: 'ACTIVE',
+          companyProfile: data.companyName
+            ? {
+                upsert: {
+                  create: {
+                    companyNameAr: data.companyName,
+                    crNumber: data.crNumber || '1010000000',
+                  },
+                  update: {
+                    companyNameAr: data.companyName,
+                    crNumber: data.crNumber || '1010000000',
+                  },
+                },
+              }
+            : undefined,
+        },
+        include: {
+          companyProfile: true,
+        },
+      })
+
+      const token = this.generateToken(updatedUser)
+      return { user: updatedUser, token }
     }
 
     const salt = await bcrypt.genSalt(10)

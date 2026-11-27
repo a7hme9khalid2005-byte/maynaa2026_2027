@@ -32,7 +32,7 @@ export default function ImporterSettingsPage() {
   const { openNotifications } = useNotifications()
   const { user: authUser } = useAuth() || {}
   const currentUser = authUser || authService.getCurrentUser()
-  const isDemoSarah = !currentUser || currentUser.email === 'importer@meynaa.com'
+  const isDemoSarah = currentUser?.email === 'importer@meynaa.com'
 
   const [activeTab, setActiveTab] = useState('بيانات الشركة')
   const [saved, setSaved] = useState(false)

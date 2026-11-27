@@ -84,7 +84,7 @@ export default function ImporterShipmentsPage() {
   const { openNotifications } = useNotifications()
   const { user: authUser } = useAuth() || {}
   const currentUser = authUser || authService.getCurrentUser()
-  const isDemoSarah = !currentUser || currentUser.email === 'importer@meynaa.com'
+  const isDemoSarah = currentUser?.email === 'importer@meynaa.com'
 
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('جميع الحالات')

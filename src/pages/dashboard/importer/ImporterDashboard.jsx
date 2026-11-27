@@ -40,7 +40,7 @@ export default function ImporterDashboard() {
   const { user: authUser } = useAuth() || {}
   const currentUser = authUser || authService.getCurrentUser()
 
-  const isDemoSarah = !currentUser || currentUser.email === 'importer@meynaa.com'
+  const isDemoSarah = currentUser?.email === 'importer@meynaa.com'
   const displayName = currentUser?.fullName || (isDemoSarah ? 'سارة الزاهرني' : 'العميل العزيز')
   const displayCompany = currentUser?.companyName || currentUser?.companyProfile?.companyNameAr || (isDemoSarah ? 'مجموعة الريادة للمقاولات' : 'منشأة تجارية معتمدة')
 

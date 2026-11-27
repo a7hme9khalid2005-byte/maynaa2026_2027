@@ -25,7 +25,7 @@ export default function ImporterSidebar({ activePath }) {
   const { user: authUser, logout } = useAuth() || {}
   const currentUser = authUser || authService.getCurrentUser()
 
-  const isDemoSarah = !currentUser || currentUser.email === 'importer@meynaa.com'
+  const isDemoSarah = currentUser?.email === 'importer@meynaa.com'
   const displayName = currentUser?.fullName || (isDemoSarah ? 'سارة الزاهرني' : 'العميل العزيز')
   const displayCompany = currentUser?.companyName || currentUser?.companyProfile?.companyNameAr || (isDemoSarah ? 'مجموعة الريادة للمقاولات' : 'منشأة تجارية معتمدة')
   const displayRole = isDemoSarah ? 'مديرة سلسلة التوريد' : 'صاحب المنشأة'

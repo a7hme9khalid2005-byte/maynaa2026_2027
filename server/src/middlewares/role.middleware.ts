@@ -8,7 +8,10 @@ export function requireRole(...allowedRoles: string[]) {
       return sendError(res, 'يجب تسجيل الدخول أولاً', 401)
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    const userRole = (req.user.role || '').toUpperCase()
+    const allowed = allowedRoles.map((r) => r.toUpperCase())
+
+    if (!allowed.includes(userRole)) {
       return sendError(res, 'ليس لديك الصلاحية الكافية للوصول إلى هذا القسم', 403)
     }
 

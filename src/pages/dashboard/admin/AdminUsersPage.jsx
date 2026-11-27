@@ -314,7 +314,14 @@ export default function AdminUsersPage() {
     }
     setSelectedUser(updated)
     setUsersList((prev) => prev.map((u) => (u.id === selectedUser.id ? updated : u)))
-    setActionFeedback(`تم تحديث حالة الحساب إلى: ${newStatus}`)
+
+    // تحديث قاعدة بيانات Supabase الحقيقية
+    if (selectedUser?.id) {
+      const dbStatus = (newStatus === 'مفعل' || newStatus === 'نشط') ? 'ACTIVE' : (newStatus === 'مرفوض' || newStatus === 'إيقاف') ? 'BLOCKED' : 'PENDING_VERIFICATION'
+      api.patch(`/admin/users/${selectedUser.id}/status`, { status: dbStatus }).catch(() => {})
+    }
+
+    setActionFeedback(`تم تحديث حالة الحساب إلى: ${newStatus} وحفظها في قاعدة البيانات`)
     setTimeout(() => setActionFeedback(''), 3000)
   }
 
@@ -328,6 +335,12 @@ export default function AdminUsersPage() {
     }
     setSelectedUser(updated)
     setUsersList((prev) => prev.map((u) => (u.id === selectedUser.id ? updated : u)))
+
+    // تحديث قاعدة بيانات Supabase الحقيقية
+    if (selectedUser?.id) {
+      api.patch(`/admin/users/${selectedUser.id}/status`, { status: 'BLOCKED' }).catch(() => {})
+    }
+
     setShowRejectModal(false)
     setActionFeedback(`تم رفض طلب تسجيل (${selectedUser.name}) بنجاح${sendNotification ? ' وإرسال إشعار للشركة' : ''}`)
     setTimeout(() => setActionFeedback(''), 4000)

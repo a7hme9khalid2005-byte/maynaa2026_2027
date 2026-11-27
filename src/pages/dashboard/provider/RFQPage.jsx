@@ -217,8 +217,22 @@ export default function RFQPage() {
     setQuoteForm({ ...quoteForm, [e.target.name]: e.target.value })
   }
 
-  const handleQuoteSubmit = (e) => {
+  const handleQuoteSubmit = async (e) => {
     e.preventDefault()
+
+    const targetDbId = currentRfq?.dbId || currentRfq?.id
+    if (targetDbId && !isDemoProvider) {
+      try {
+        await api.post('/rfq/quote', {
+          rfqId: targetDbId,
+          price: totalQuotePrice,
+          transitDays: parseInt(quoteForm.transitTime, 10) || 14,
+          notes: quoteForm.notes
+        })
+      } catch (err) {
+        console.warn('API post quote notice:', err.message)
+      }
+    }
 
     // Mark RFQ as quoted
     setRfqList(

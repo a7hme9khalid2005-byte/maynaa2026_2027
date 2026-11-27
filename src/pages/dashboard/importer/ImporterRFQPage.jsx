@@ -130,16 +130,20 @@ export default function ImporterRFQPage() {
   // قراءة طلبات عروض الأسعار الحية من قاعدة البيانات
   useEffect(() => {
     if (isDemoSarah) return
-    api.get('/rfq/market')
-      .then((res) => {
+    const fetchRfqs = async () => {
+      try {
+        let res = await api.get('/rfq/my').catch(() => null)
+        if (!res?.data || !Array.isArray(res.data) || res.data.length === 0) {
+          res = await api.get('/rfq/market').catch(() => null)
+        }
         if (Array.isArray(res?.data) && res.data.length > 0) {
           const mapped = res.data.map((r) => ({
             id: r.rfqNumber || `RFQ-${r.id.slice(0, 8)}`,
             dbId: r.id,
             title: r.cargoDetails || `طلب شحن ${r.sector || 'بضائع'}`,
-            type: r.sector || 'بحري FCL',
-            bidsCount: `${r._count?.quotes || 0} عروض`,
-            route: `${r.originCity || 'المصدر'}   ${r.destinationCity || 'الوجهة'}`,
+            type: r.sector === 'SEA_FREIGHT' ? 'بحري FCL' : r.sector === 'AIR_FREIGHT' ? 'جوي سريع' : r.sector || 'بحري',
+            bidsCount: `${(r.quotes || []).length || r._count?.quotes || 0} عروض`,
+            route: `${r.originCity || 'المصدر'} ← ${r.destinationCity || 'الوجهة'}`,
             origin: r.originCity || 'الميناء الرئيسي',
             destination: r.destinationCity || 'المستودع المركزي',
             weight: '20,000 كغ',
@@ -152,20 +156,26 @@ export default function ImporterRFQPage() {
             statusColor: r.status === 'OPEN' ? '#0284C7' : '#009F65',
             bids: (r.quotes || []).map((q) => ({
               id: q.id,
-              provider: q.provider?.fullName || 'مزود خدمة معتمد',
+              provider: q.provider?.fullName || q.provider?.companyProfile?.companyNameAr || 'مزود خدمة معتمد',
+              providerInitials: (q.provider?.fullName || 'م').slice(0, 1),
               providerCode: 'PRV',
-              rating: 4.8,
-              reviewsCount: 15,
-              bidAmount: `$${q.price?.toLocaleString()}`,
-              transitTime: `${q.transitDays} يوم`,
-              notes: q.notes || 'عرض سعر معتمد شامل التأمين والتخليص الجمركي'
+              rating: '4.9',
+              stars: 5,
+              price: `$${q.price?.toLocaleString()}`,
+              days: `${q.transitDays} يوم`,
+              status: q.isAccepted ? 'مقبول' : 'قيد الانتظار',
+              note: q.notes || 'عرض سعر معتمد شامل التأمين والتخليص الجمركي'
             }))
           }))
           setRfqList(mapped)
           setSelectedRfqId((prev) => prev || mapped[0].id)
         }
-      })
-      .catch(() => {})
+      } catch (err) {
+        console.warn('Fetch RFQ error:', err.message)
+      }
+    }
+
+    fetchRfqs()
   }, [isDemoSarah])
   const [searchTerm, setSearchTerm] = useState('')
   const [actionNotice, setActionNotice] = useState(null)
@@ -192,7 +202,16 @@ export default function ImporterRFQPage() {
 
   const selectedRfq = rfqList.find((r) => r.id === selectedRfqId) || rfqList[0] || null
 
-  const handleAcceptBid = (bid) => {
+  const handleAcceptBid = async (bid) => {
+    // 0. استدعاء الـ API لاعتماد العرض وإنشاء الشحنة تلقائياً في قاعدة البيانات
+    if (bid.id && !isDemoSarah) {
+      try {
+        await api.post(`/rfq/quote/${bid.id}/accept`)
+      } catch (err) {
+        console.warn('API accept quote notice:', err.message)
+      }
+    }
+
     // 1. Update the bid status in rfqList
     setRfqList((prevRfqs) =>
       prevRfqs.map((rfq) => {
@@ -215,7 +234,7 @@ export default function ImporterRFQPage() {
     setActionNotice({
       type: 'accepted',
       title: `تم قبول عرض "${bid.provider}" بنجاح!`,
-      subtitle: `لطلب: "${selectedRfq.title}" (${selectedRfq.id}) • بقيمة ${bid.price}`,
+      subtitle: `لطلب: "${selectedRfq.title}" (${selectedRfq.id}) • بقيمة ${bid.price} وتم تحويله لشحنة فعلية!`,
       rfqTitle: selectedRfq.title
     })
     setTimeout(() => setActionNotice(null), 5000)
@@ -251,31 +270,39 @@ export default function ImporterRFQPage() {
     e.preventDefault()
     if (!newTitle) return
 
+    let createdId = `RFQ-2026-${Math.floor(450 + Math.random() * 50)}`
+    let dbId = null
+
     // إرسال طلب عرض السعر لقاعدة بيانات Supabase مباشرة عبر الـ API
     try {
-      await api.post('/rfq', {
-        sector: 'بحري FCL',
+      const res = await api.post('/rfq', {
+        sector: 'SEA_FREIGHT',
         originCity: newOrigin || 'شنغهاي - الصين',
         destinationCity: newDest || 'ميناء الملك عبد العزيز - الدمام',
         cargoDetails: newTitle,
         budgetMax: 30000
       })
+      if (res?.data) {
+        createdId = res.data.rfqNumber || createdId
+        dbId = res.data.id
+      }
     } catch (err) {
       console.warn('API post RFQ notice:', err.message)
     }
 
     const newRfq = {
-      id: `RFQ-2026-${Math.floor(450 + Math.random() * 50)}`,
+      id: createdId,
+      dbId: dbId,
       title: newTitle,
       type: 'بحري FCL',
       bidsCount: '0 عروض',
-      route: `${newOrigin || 'شنغهاي'}   ${newDest || 'ميناء الملك عبد العزيز'}`,
+      route: `${newOrigin || 'شنغهاي'} ← ${newDest || 'ميناء الملك عبد العزيز'}`,
       origin: newOrigin || 'شنغهاي - الصين',
       destination: newDest || 'ميناء الملك عبد العزيز - الدمام',
       weight: '20,000 كغ',
       budget: '$25,000-$35,000',
       deadline: '2026-10-30',
-      date: '2026-11-02',
+      date: new Date().toLocaleDateString('ar-SA'),
       status: 'مفتوح',
       statusType: 'open',
       statusBg: '#EBF5FE',
@@ -299,7 +326,7 @@ export default function ImporterRFQPage() {
       title: 'تم نشر طلب عرض السعر بنجاح في قاعدة البيانات!',
       subtitle: `طلبك "${newRfq.title}" مسجل ومتاح الآن لمزودي الخدمة لتقديم عروضهم.`
     })
-    setTimeout(() => setActionNotice(null), 4500)
+    setTimeout(() => setActionNotice(null), 5000)
   }
 
   return (

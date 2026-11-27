@@ -43,6 +43,23 @@ export class RFQService {
     })
   }
 
+  // 2.1 استعراض طلبات التسعير الخاصة بالمستورد المسجل
+  static async getMyRFQs(importerId: string) {
+    return prisma.rFQRequest.findMany({
+      where: { importerId },
+      include: {
+        quotes: {
+          include: {
+            provider: {
+              select: { id: true, fullName: true, companyProfile: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+  }
+
   // 3. تقديم مزود الخدمة لعرض سعر منافس
   static async submitQuote(params: {
     rfqId: string

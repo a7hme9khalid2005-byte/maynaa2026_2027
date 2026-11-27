@@ -72,6 +72,14 @@ class ApiClient {
     })
   }
 
+  put(endpoint, body, headers = {}) {
+    return this.request(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+      headers,
+    })
+  }
+
   patch(endpoint, body, headers = {}) {
     return this.request(endpoint, {
       method: 'PATCH',

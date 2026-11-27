@@ -8,8 +8,12 @@ const router = Router()
 // إنشاء طلب تسعير (خاص بالمستورد)
 router.post('/', authenticate, requireRole('IMPORTER', 'SUPER_ADMIN'), RFQController.createRFQ)
 
+// استعراض طلبات التسعير الخاصة بالمستورد الحالي
+router.get('/my', authenticate, RFQController.getMyRFQs)
+router.get('/', authenticate, RFQController.getMyRFQs)
+
 // استعراض طلبات السوق (لمزودي الخدمة)
-router.get('/market', authenticate, RFQController.getOpenMarketRFQs)
+router.get('/market', RFQController.getOpenMarketRFQs)
 
 // تقديم عرض سعر (لمزود الخدمة)
 router.post('/quote', authenticate, requireRole('PROVIDER', 'SUPER_ADMIN'), RFQController.submitQuote)

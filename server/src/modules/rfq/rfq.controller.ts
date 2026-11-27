@@ -30,6 +30,15 @@ export class RFQController {
     }
   }
 
+  static async getMyRFQs(req: AuthRequest, res: Response) {
+    try {
+      const rfqs = await RFQService.getMyRFQs(req.user!.id)
+      return sendSuccess(res, rfqs, 'تم استرجاع طلبات التسعير الخاصة بك بنجاح')
+    } catch (err: any) {
+      return sendError(res, err.message)
+    }
+  }
+
   static async submitQuote(req: AuthRequest, res: Response) {
     try {
       const { rfqId, price, transitDays, notes } = req.body

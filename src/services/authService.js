@@ -36,7 +36,16 @@ export const authService = {
 
   // تحديث الملف الشخصي للمستخدم في قاعدة البيانات
   async updateProfile(data) {
-    const res = await api.put('/auth/profile', data)
+    let res = null
+    try {
+      res = await api.put('/auth/profile', data)
+    } catch {
+      try {
+        res = await api.patch('/auth/profile', data)
+      } catch {
+        res = await api.post('/auth/profile', data)
+      }
+    }
     const user = res?.data
     if (user) {
       const current = this.getCurrentUser() || {}

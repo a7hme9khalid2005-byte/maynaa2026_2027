@@ -19,6 +19,10 @@ router.post('/forgot-password', validate(ForgotPasswordSchema), AuthController.f
 router.get('/me', authenticate, AuthController.me)
 router.get('/profile', authenticate, AuthController.me)
 router.put('/profile', authenticate, AuthController.updateProfile)
+router.patch('/profile', authenticate, AuthController.updateProfile)
+router.post('/profile', authenticate, AuthController.updateProfile)
 router.put('/me', authenticate, AuthController.updateProfile)
+router.patch('/me', authenticate, AuthController.updateProfile)
+router.post('/me', authenticate, AuthController.updateProfile)
 
 export default router

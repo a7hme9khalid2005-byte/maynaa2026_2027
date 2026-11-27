@@ -3,9 +3,10 @@ node_modules
 server/node_modules
 
 # Production Build
-dist
-dist-ssr
-server/dist
+/dist
+/dist-ssr
+!server/dist
+!server/dist/**
 
 # Environment variables
 .env

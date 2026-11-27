@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const admin_controller_js_1 = require("./admin.controller.js");
+const auth_middleware_js_1 = require("../../middlewares/auth.middleware.js");
+const role_middleware_js_1 = require("../../middlewares/role.middleware.js");
+const router = (0, express_1.Router)();
+router.get('/kpis', auth_middleware_js_1.authenticate, (0, role_middleware_js_1.requireRole)('SUPER_ADMIN'), admin_controller_js_1.AdminController.getKPIs);
+router.get('/users', auth_middleware_js_1.authenticate, (0, role_middleware_js_1.requireRole)('SUPER_ADMIN'), admin_controller_js_1.AdminController.getUsers);
+router.patch('/users/:id/status', auth_middleware_js_1.authenticate, (0, role_middleware_js_1.requireRole)('SUPER_ADMIN'), admin_controller_js_1.AdminController.updateUserStatus);
+router.get('/config', auth_middleware_js_1.authenticate, admin_controller_js_1.AdminController.getConfig);
+router.put('/commissions', auth_middleware_js_1.authenticate, (0, role_middleware_js_1.requireRole)('SUPER_ADMIN'), admin_controller_js_1.AdminController.updateCommissions);
+router.get('/search', auth_middleware_js_1.authenticate, admin_controller_js_1.AdminController.search);
+exports.default = router;

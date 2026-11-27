@@ -1,0 +1,28 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ENV = void 0;
+const dotenv_1 = __importDefault(require("dotenv"));
+const path_1 = __importDefault(require("path"));
+dotenv_1.default.config({ path: path_1.default.resolve(process.cwd(), '.env') });
+exports.ENV = {
+    PORT: parseInt(process.env.PORT || '5000', 10),
+    NODE_ENV: process.env.NODE_ENV || 'development',
+    CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
+    DATABASE_URL: process.env.DATABASE_URL || 'file:./dev.db',
+    JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || 'meynaa_access_secret_2026',
+    JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'meynaa_refresh_secret_2026',
+    JWT_ACCESS_EXPIRY: process.env.JWT_ACCESS_EXPIRY || '1d',
+    JWT_REFRESH_EXPIRY: process.env.JWT_REFRESH_EXPIRY || '7d',
+    UPLOAD_DIR: process.env.UPLOAD_DIR || './uploads',
+    MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB || '10', 10),
+    PLATFORM_COMPANY_NAME: process.env.PLATFORM_COMPANY_NAME || 'شركة ميناء للخدمات اللوجستية المحدودة',
+    PLATFORM_VAT_NUMBER: process.env.PLATFORM_VAT_NUMBER || '310245678900003',
+    SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
+    SMTP_PORT: parseInt(process.env.SMTP_PORT || '587', 10),
+    SMTP_USER: process.env.SMTP_USER || 'maynaa26.27logistics@gmail.com',
+    SMTP_PASS: process.env.SMTP_PASS || 'uwwklbhfnglwxjar',
+    RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+};

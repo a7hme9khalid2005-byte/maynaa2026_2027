@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const shipments_controller_js_1 = require("./shipments.controller.js");
+const auth_middleware_js_1 = require("../../middlewares/auth.middleware.js");
+const router = (0, express_1.Router)();
+router.get('/', auth_middleware_js_1.authenticate, shipments_controller_js_1.ShipmentsController.getShipments);
+router.get('/:id', auth_middleware_js_1.authenticate, shipments_controller_js_1.ShipmentsController.getShipmentById);
+router.patch('/:id/status', auth_middleware_js_1.authenticate, shipments_controller_js_1.ShipmentsController.updateStatus);
+exports.default = router;

@@ -25,7 +25,7 @@ export default function Sidebar({ activePath }) {
   const { user: authUser, logout } = useAuth() || {}
   const currentUser = authUser || authService.getCurrentUser()
 
-  const isDemoProvider = !currentUser || currentUser.email === 'provider@meynaa.com'
+  const isDemoProvider = currentUser?.email === 'provider@meynaa.com'
   const displayName = currentUser?.fullName || (isDemoProvider ? 'خالد العمري' : 'مزود الخدمة')
   const displayCompany = currentUser?.companyName || currentUser?.companyProfile?.companyNameAr || (isDemoProvider ? 'شركة الأفق للشحن الدولي' : 'شركة خدمات لوجستية معتمدة')
   const displayRole = isDemoProvider ? 'مدير عام' : 'المفوض بالتوقيع'

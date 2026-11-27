@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import Sidebar from '../../../components/dashboard/Sidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
@@ -6,6 +6,7 @@ import TruckTrackingMap from '../../../components/dashboard/TruckTrackingMap'
 import { useNotifications } from '../../../context/NotificationContext'
 import { useAuth } from '../../../context/AuthContext'
 import authService from '../../../services/authService'
+import api from '../../../services/api'
 import {
   Ship,
   Search,
@@ -83,13 +84,36 @@ export default function ShipmentsPage() {
   const { openNotifications } = useNotifications()
   const { user: authUser } = useAuth() || {}
   const currentUser = authUser || authService.getCurrentUser()
-  const isDemoProvider = !currentUser || currentUser.email === 'provider@meynaa.com'
+  const isDemoProvider = currentUser?.email === 'provider@meynaa.com'
 
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState('table') // 'table' | 'map'
   const [selectedShipmentTruck, setSelectedShipmentTruck] = useState('TRK-104')
+  const [dbShipments, setDbShipments] = useState([])
 
-  const activeShipments = isDemoProvider ? initialShipments : []
+  // قراءة الشحنات الحية الخاصة بمزود الخدمة من قاعدة البيانات
+  useEffect(() => {
+    if (isDemoProvider) return
+    api.get('/shipments')
+      .then((res) => {
+        if (Array.isArray(res?.data) && res.data.length > 0) {
+          const mapped = res.data.map((s) => ({
+            id: s.trackingNumber || s.id,
+            client: s.importer?.fullName || 'مستورد معتمد',
+            route: `${s.originAddress || 'المصدر'} ← ${s.destinationAddress || 'الوجهة'}`,
+            value: s.invoice?.totalAmount ? `$${s.invoice.totalAmount.toLocaleString()}` : '$15,000',
+            progress: s.status === 'DELIVERED' ? 100 : s.status === 'CUSTOMS' ? 80 : 50,
+            status: s.status === 'DELIVERED' ? 'مكتملة' : s.status === 'CUSTOMS' ? 'في الجمارك' : 'قيد الشحن',
+            type: s.transportType === 'SEA' ? 'بحري' : s.transportType === 'AIR' ? 'جوي' : 'بري',
+            eta: s.etaDate ? new Date(s.etaDate).toLocaleDateString('ar-SA') : 'خلال 3 أيام'
+          }))
+          setDbShipments(mapped)
+        }
+      })
+      .catch(() => {})
+  }, [isDemoProvider])
+
+  const activeShipments = isDemoProvider ? initialShipments : dbShipments
 
   const filtered = activeShipments.filter((item) =>
     item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -1,9 +1,11 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import Sidebar from '../../../components/dashboard/Sidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import { useNotifications } from '../../../context/NotificationContext'
 import { useAuth } from '../../../context/AuthContext'
 import authService from '../../../services/authService'
+import api from '../../../services/api'
 import {
   DollarSign,
   FileText,
@@ -40,10 +42,43 @@ const monthlySalesData = [
 
 export default function Dashboard() {
   const { openNotifications } = useNotifications()
-  const { user: authUser } = useAuth() || {}
-  const currentUser = authUser || authService.getCurrentUser()
+  const { user: authUser, setUser } = useAuth() || {}
+  const [dbUser, setDbUser] = useState(null)
+  const [liveShipmentsCount, setLiveShipmentsCount] = useState(null)
+  const [liveRfqCount, setLiveRfqCount] = useState(null)
 
-  const isDemoProvider = !currentUser || currentUser.email === 'provider@meynaa.com'
+  useEffect(() => {
+    // 1. قراءة بيانات مزود الخدمة من قاعدة البيانات
+    authService.getProfile()
+      .then((res) => {
+        if (res?.data) {
+          setDbUser(res.data)
+          if (setUser) setUser(res.data)
+        }
+      })
+      .catch(() => {})
+
+    // 2. قراءة شحنات المزود من قاعدة البيانات
+    api.get('/shipments')
+      .then((res) => {
+        if (Array.isArray(res?.data)) {
+          setLiveShipmentsCount(res.data.length)
+        }
+      })
+      .catch(() => {})
+
+    // 3. قراءة عروض الأسعار المتاحة في السوق
+    api.get('/rfq/market')
+      .then((res) => {
+        if (Array.isArray(res?.data)) {
+          setLiveRfqCount(res.data.length)
+        }
+      })
+      .catch(() => {})
+  }, [setUser])
+
+  const currentUser = dbUser || authUser || authService.getCurrentUser()
+  const isDemoProvider = currentUser?.email === 'provider@meynaa.com'
   const displayName = currentUser?.fullName || (isDemoProvider ? 'خالد العمري' : 'مزود الخدمة')
   const displayCompany = currentUser?.companyName || currentUser?.companyProfile?.companyNameAr || (isDemoProvider ? 'شركة الأفق للشحن الدولي' : 'شركة خدمات لوجستية معتمدة')
 
@@ -195,11 +230,11 @@ export default function Dashboard() {
             {/* Middle & Bottom Content */}
             <div className="relative z-10">
               <div className="text-3xl font-black text-[#011222] tracking-tight">
-                {isDemoProvider ? '84' : '0'}
+                {isDemoProvider ? '84' : (liveRfqCount !== null ? liveRfqCount : '0')}
               </div>
-              <div className="text-sm font-bold text-[#475569] mt-1">عروض مقدمة</div>
+              <div className="text-sm font-bold text-[#475569] mt-1">عروض وطلبات متاحة</div>
               <div className="text-xs font-semibold text-[#64748B] mt-0.5">
-                {isDemoProvider ? '61 مقبول' : 'ابدأ بتقديم أول عرض'}
+                {isDemoProvider ? '61 مقبول' : 'جاهز لتقديم عروض الأسعار'}
               </div>
             </div>
 
@@ -226,7 +261,7 @@ export default function Dashboard() {
             {/* Middle & Bottom Content */}
             <div className="relative z-10">
               <div className="text-3xl font-black text-[#011222] tracking-tight">
-                {isDemoProvider ? '29' : '0'}
+                {isDemoProvider ? '29' : (liveShipmentsCount !== null ? liveShipmentsCount : '0')}
               </div>
               <div className="text-sm font-bold text-[#475569] mt-1">شحنات نشطة</div>
               <div className="text-xs font-semibold text-[#94A3B8] mt-0.5">

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AdminSidebar from '../../../components/dashboard/AdminSidebar'
 import AdminHeader from '../../../components/dashboard/AdminHeader'
+import api from '../../../services/api'
 import {
   Search,
   Users,
@@ -234,6 +235,35 @@ export default function AdminUsersPage() {
   const [filterAccountType, setFilterAccountType] = useState('جميع الحسابات')
   const [filterStatus, setFilterStatus] = useState('جميع الحالات')
   const [actionFeedback, setActionFeedback] = useState('')
+
+  // قراءة المستخدمين المسجلين الفعليين من قاعدة بيانات Supabase
+  useEffect(() => {
+    api.get('/admin/users')
+      .then((res) => {
+        if (Array.isArray(res?.data) && res.data.length > 0) {
+          const mapped = res.data.map((u, idx) => ({
+            id: u.id,
+            numId: idx + 1,
+            name: u.fullName || 'مستخدم المنصة',
+            email: u.email,
+            phone: u.phone || '+966 50 000 0000',
+            passwordPlain: '••••••••',
+            company: u.companyProfile?.companyNameAr || (u.role === 'IMPORTER' ? 'مؤسسة استيراد' : u.role === 'PROVIDER' ? 'شركة لوجستية' : 'إدارة ميناء'),
+            role: u.role === 'IMPORTER' ? 'مستورد' : u.role === 'PROVIDER' ? 'مزود خدمة' : 'مدير النظام',
+            accountType: u.role === 'IMPORTER' ? 'مستورد' : u.role === 'PROVIDER' ? 'مزود خدمة' : 'إدارة',
+            status: u.status === 'ACTIVE' ? 'نشط' : u.status === 'BLOCKED' ? 'مرفوض' : 'معلق',
+            avatar: (u.fullName || 'مي').slice(0, 2),
+            registeredAt: new Date(u.createdAt || Date.now()).toLocaleDateString('ar-SA'),
+            documentsCount: 4,
+            crNumber: u.companyProfile?.crNumber || '1010000000',
+            permissions: u.role === 'SUPER_ADMIN' ? ['Super Admin'] : ['Customs Officer'],
+          }))
+          setUsersList(mapped)
+          setSelectedUser(mapped[0])
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   // Modal 1: Rejection Modal State
   const [showRejectModal, setShowRejectModal] = useState(false)

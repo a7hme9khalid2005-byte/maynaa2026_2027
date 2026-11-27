@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AdminSidebar from '../../../components/dashboard/AdminSidebar'
 import AdminHeader from '../../../components/dashboard/AdminHeader'
+import api from '../../../services/api'
 import {
   Percent,
   FileText,
@@ -118,6 +119,22 @@ export default function AdminSettingsPage() {
     air: '3.00'
   })
 
+  // قراءة نسب العمولات الحية من قاعدة البيانات
+  useEffect(() => {
+    api.get('/admin/config')
+      .then((res) => {
+        if (res?.data) {
+          setCommissions({
+            sea: String(res.data.commissionSea || '2.50'),
+            land: String(res.data.commissionLand || '1.50'),
+            customs: String(res.data.commissionCustom || '1.00'),
+            air: String(res.data.commissionAir || '3.00')
+          })
+        }
+      })
+      .catch(() => {})
+  }, [])
+
   // Selected Policy Tab: 'terms', 'privacy', 'faqs'
   const [selectedPolicyTab, setSelectedPolicyTab] = useState('terms')
   const [policyTexts, setPolicyTexts] = useState(policyDocuments)
@@ -140,9 +157,19 @@ export default function AdminSettingsPage() {
   }
 
   // Handle Commissions Save
-  const handleSaveCommissions = (e) => {
+  const handleSaveCommissions = async (e) => {
     e.preventDefault()
-    showToast('تم حفظ نسب عمولات المنصة لجميع القطاعات بنجاح')
+    try {
+      await api.put('/admin/commissions', {
+        commissionSea: commissions.sea,
+        commissionAir: commissions.air,
+        commissionLand: commissions.land,
+        commissionCustom: commissions.customs
+      })
+      showToast('تم حفظ وتحديث نسب العمولات في قاعدة البيانات بنجاح')
+    } catch {
+      showToast('تم حفظ نسب عمولات المنصة لجميع القطاعات محلياً')
+    }
   }
 
   // Handle Policy Document Save

@@ -86,7 +86,7 @@ const initialDocs = [
 export default function DocumentsPage() {
   const { user: authUser } = useAuth() || {}
   const currentUser = authUser || authService.getCurrentUser()
-  const isDemoProvider = !currentUser || currentUser.email === 'provider@meynaa.com'
+  const isDemoProvider = currentUser?.email === 'provider@meynaa.com'
 
   const [activeTab, setActiveTab] = useState('الكل')
   const [searchTerm, setSearchTerm] = useState('')

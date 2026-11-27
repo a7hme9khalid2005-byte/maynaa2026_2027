@@ -114,4 +114,23 @@ export class AdminService {
 
     return { shipments, trucks, users }
   }
+
+  // 4. استرجاع كافة المستخدمين المسجلين في المنصة من قاعدة البيانات
+  static async getUsers() {
+    return prisma.user.findMany({
+      include: {
+        companyProfile: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+  }
+
+  // 5. تعديل حالة المستخدم (ACTIVE, BLOCKED, SUSPENDED)
+  static async updateUserStatus(userId: string, status: string) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { status: status as any },
+      include: { companyProfile: true },
+    })
+  }
 }

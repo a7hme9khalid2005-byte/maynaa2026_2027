@@ -45,4 +45,24 @@ export class AdminController {
       return sendError(res, err.message)
     }
   }
+
+  static async getUsers(_req: Request, res: Response) {
+    try {
+      const users = await AdminService.getUsers()
+      return sendSuccess(res, users, 'تم استرجاع قائمة المستخدمين من قاعدة البيانات')
+    } catch (err: any) {
+      return sendError(res, err.message)
+    }
+  }
+
+  static async updateUserStatus(req: Request, res: Response) {
+    try {
+      const { id } = req.params
+      const { status } = req.body
+      const updated = await AdminService.updateUserStatus(id, status)
+      return sendSuccess(res, updated, 'تم تحديث حالة المستخدم بنجاح')
+    } catch (err: any) {
+      return sendError(res, err.message)
+    }
+  }
 }

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AdminSidebar from '../../../components/dashboard/AdminSidebar'
 import AdminHeader from '../../../components/dashboard/AdminHeader'
+import api from '../../../services/api'
 import {
   Search,
   Truck,
@@ -160,6 +161,30 @@ export default function AdminShipmentsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedShipment, setSelectedShipment] = useState(initialShipments[6]) // SHN-2026-966 as in screenshot
   const [auditTrail, setAuditTrail] = useState(initialAuditTrail)
+
+  // قراءة كافة شحنات المنصة من قاعدة البيانات مباشرة
+  useEffect(() => {
+    api.get('/shipments')
+      .then((res) => {
+        if (Array.isArray(res?.data) && res.data.length > 0) {
+          const mapped = res.data.map((s) => ({
+            id: s.trackingNumber || s.id,
+            clientName: s.importer?.fullName || 'مستورد معتمد',
+            transportType: s.transportType === 'SEA' ? 'بحري' : s.transportType === 'AIR' ? 'جوي' : 'بري',
+            route: `${s.originAddress || 'المصدر'} - ${s.destinationAddress || 'الوجهة'}`,
+            status: s.status === 'DELIVERED' ? 'مكتملة' : s.status === 'CUSTOMS' ? 'في الجمارك' : 'قيد الشحن',
+            statusBg: s.status === 'DELIVERED' ? '#E6F9F0' : '#FFF4E8',
+            statusColor: s.status === 'DELIVERED' ? '#009F65' : '#FB8731',
+            createdAt: new Date(s.createdAt || Date.now()).toLocaleDateString('ar-SA'),
+            carrier: s.provider?.fullName || 'شركة الشحن المعتمدة',
+            notes: `شحنة مسجلة برقم تتبع ${s.trackingNumber || s.id}`
+          }))
+          setShipments(mapped)
+          setSelectedShipment(mapped[0])
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   // Manual Control Form State
   const [newStatus, setNewStatus] = useState('مكتملة')

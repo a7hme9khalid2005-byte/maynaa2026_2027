@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Sidebar from '../../../components/dashboard/Sidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import { useNotifications } from '../../../context/NotificationContext'
+import api from '../../../services/api'
 import {
   Search,
   RotateCcw,
@@ -153,6 +154,32 @@ export default function RFQPage() {
     validityDays: '14 يوماً',
     notes: 'السعر شامل رسوم التفريغ والتوثيق الجمركي النهائي والتسليم لباب المستودع.'
   })
+
+  // قراءة طلبات عروض الأسعار المفتوحة من قاعدة بيانات Supabase
+  useEffect(() => {
+    api.get('/rfq/market')
+      .then((res) => {
+        if (Array.isArray(res?.data) && res.data.length > 0) {
+          const mapped = res.data.map((r) => ({
+            id: r.rfqNumber || `RFQ-${r.id.slice(0, 8)}`,
+            dbId: r.id,
+            importer: r.importer?.fullName || 'مستورد معتمد',
+            type: r.sector || 'بحري',
+            origin: r.originCity || 'ميناء المنشأ',
+            destination: r.destinationCity || 'مستودع الوجهة',
+            weight: '15 طن',
+            date: new Date(r.createdAt || Date.now()).toLocaleDateString('ar-SA'),
+            budget: r.budgetMax ? `$${r.budgetMax.toLocaleString()}` : '$5,000-$10,000',
+            status: r.status === 'OPEN' ? 'جديد' : 'قيد المراجعة',
+            statusBg: r.status === 'OPEN' ? '#DCF0FE' : '#FEDECA',
+            statusColor: r.status === 'OPEN' ? '#0284C7' : '#EA580C',
+          }))
+          setRfqList(mapped)
+          setQuoteForm((prev) => ({ ...prev, rfqId: mapped[0].id }))
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   // Selected RFQ object
   const currentRfq = rfqList.find((r) => r.id === quoteForm.rfqId) || rfqList[0]

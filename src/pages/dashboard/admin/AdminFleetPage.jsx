@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import AdminSidebar from '../../../components/dashboard/AdminSidebar'
 import AdminHeader from '../../../components/dashboard/AdminHeader'
 import RealFleetMap from '../../../components/dashboard/RealFleetMap'
+import api from '../../../services/api'
 import {
   Truck,
   ShieldCheck,
@@ -330,11 +331,37 @@ const FULL_EMERGENCY_ALERTS = [
 ]
 
 export default function AdminFleetPage() {
-  const [fleetList] = useState(initialFleet)
+  const [fleetList, setFleetList] = useState(initialFleet)
   const [selectedTruck, setSelectedTruck] = useState(initialFleet[0])
   const [statusFilter, setStatusFilter] = useState('all') // 'all' | 'متحركة' | 'بانتظار التفتيش الجمركي' | 'استراحة نظامية' | 'معطلة'
   const [searchTerm, setSearchTerm] = useState('')
   const mapSectionRef = useRef(null)
+
+  // قراءة شاحنات الأسطول الحية من قاعدة بيانات Supabase
+  useEffect(() => {
+    api.get('/fleet/trucks')
+      .then((res) => {
+        if (Array.isArray(res?.data) && res.data.length > 0) {
+          const mapped = res.data.map((t) => ({
+            id: t.fleetCode || t.id,
+            truckId: t.fleetCode || 'TRK-100',
+            plateNumber: t.plateNumber || '1234 ABC',
+            driver: t.driver?.fullName || 'سائق معتمد',
+            city: t.currentCity || 'الرياض',
+            status: t.status === 'ON_DUTY' ? 'متحركة' : t.status === 'REST' ? 'استراحة نظامية' : 'بانتظار التفتيش الجمركي',
+            statusBg: '#E8FAF0',
+            statusColor: '#009F65',
+            lat: t.lastLatitude || 24.7136,
+            lng: t.lastLongitude || 46.6753,
+            speed: t.lastSpeed ? `${t.lastSpeed} كم/س` : '80 كم/س',
+            temp: t.lastTemperature ? `${t.lastTemperature}°C` : '-18°C',
+          }))
+          setFleetList(mapped)
+          setSelectedTruck(mapped[0])
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   // Emergency Alerts Management State
   const [alerts, setAlerts] = useState(FULL_EMERGENCY_ALERTS)

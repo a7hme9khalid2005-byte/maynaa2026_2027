@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Sidebar from '../../../components/dashboard/Sidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import { useNotifications } from '../../../context/NotificationContext'
@@ -30,9 +30,9 @@ import {
 
 export default function SettingsPage() {
   const { openNotifications } = useNotifications()
-  const { user: authUser } = useAuth() || {}
+  const { user: authUser, setUser } = useAuth() || {}
   const currentUser = authUser || authService.getCurrentUser()
-  const isDemoProvider = !currentUser || currentUser.email === 'provider@meynaa.com'
+  const isDemoProvider = currentUser?.email === 'provider@meynaa.com'
 
   const [activeTab, setActiveTab] = useState('بيانات الشركة')
   const [toastMessage, setToastMessage] = useState(null)
@@ -54,25 +54,57 @@ export default function SettingsPage() {
     establishedYear: isDemoProvider ? '2016' : '2026'
   }))
 
+  // قراءة بيانات مزود الخدمة المباشرة من قاعدة البيانات فور فتح الصفحة
+  useEffect(() => {
+    if (isDemoProvider) return
+    authService.getProfile()
+      .then((res) => {
+        const u = res?.data
+        if (u) {
+          if (setUser) setUser(u)
+          setFormData((prev) => ({
+            ...prev,
+            managerName: u.fullName || prev.managerName,
+            companyName: u.companyName || u.companyProfile?.companyNameAr || prev.companyName,
+            email: u.email || prev.email,
+            phone: u.phone || prev.phone,
+            licenseNumber: u.crNumber || u.companyProfile?.crNumber || prev.licenseNumber
+          }))
+        }
+      })
+      .catch(() => {})
+  }, [isDemoProvider, setUser])
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  const handleSaveCompany = (e) => {
+  const handleSaveCompany = async (e) => {
     e.preventDefault()
-    if (currentUser) {
-      const updatedUser = {
-        ...currentUser,
+
+    try {
+      await authService.updateProfile({
         fullName: formData.managerName,
         companyName: formData.companyName,
-        companyAddress: formData.headquarters,
         phone: formData.phone,
         crNumber: formData.licenseNumber
+      })
+      showToast('تم تحديث وحفظ بيانات المنشأة في قاعدة البيانات بنجاح!')
+    } catch {
+      if (currentUser) {
+        const updatedUser = {
+          ...currentUser,
+          fullName: formData.managerName,
+          companyName: formData.companyName,
+          companyAddress: formData.headquarters,
+          phone: formData.phone,
+          crNumber: formData.licenseNumber
+        }
+        localStorage.setItem('meynaa_user', JSON.stringify(updatedUser))
+        window.dispatchEvent(new Event('storage'))
       }
-      localStorage.setItem('meynaa_user', JSON.stringify(updatedUser))
-      window.dispatchEvent(new Event('storage'))
+      showToast('تم حفظ بيانات المنشأة محلياً!')
     }
-    showToast('تم حفظ وتحديث بيانات الشركة بنجاح!')
   }
 
   // Tab 2: Services & Regions Data

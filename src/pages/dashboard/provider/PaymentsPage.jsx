@@ -112,7 +112,7 @@ export default function PaymentsPage() {
   const { openNotifications } = useNotifications()
   const { user: authUser } = useAuth() || {}
   const currentUser = authUser || authService.getCurrentUser()
-  const isDemoProvider = !currentUser || currentUser.email === 'provider@meynaa.com'
+  const isDemoProvider = currentUser?.email === 'provider@meynaa.com'
 
   const [searchTerm, setSearchTerm] = useState('')
   const [incomingTransfers, setIncomingTransfers] = useState(() => (isDemoProvider ? initialIncomingTransfers : []))

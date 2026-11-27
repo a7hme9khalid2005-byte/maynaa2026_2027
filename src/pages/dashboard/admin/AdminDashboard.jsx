@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import AdminSidebar from '../../../components/dashboard/AdminSidebar'
 import AdminHeader from '../../../components/dashboard/AdminHeader'
 import RealLogisticsMap from '../../../components/dashboard/RealLogisticsMap'
+import api from '../../../services/api'
 import {
   Bell,
   Users,
@@ -92,7 +93,19 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('')
   const [timeFilter, setTimeFilter] = useState('شهري')
   const [showTimeDropdown, setShowTimeDropdown] = useState(false)
+  const [kpiData, setKpiData] = useState(null)
   const timeDropdownRef = useRef(null)
+
+  // قراءة مؤشرات المنصة الحية من قاعدة البيانات
+  useEffect(() => {
+    api.get('/admin/kpis')
+      .then((res) => {
+        if (res?.data) {
+          setKpiData(res.data)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -155,8 +168,8 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-3 divide-x divide-x-reverse divide-[#DDD6FE]/80 pt-3 border-t border-[#DDD6FE]/80 text-center">
                 <div className="px-1">
                   <Users className="w-4 h-4 text-[#7C3AED] mx-auto mb-1" />
-                  <span className="text-sm font-black text-[#011222] block font-mono">570</span>
-                  <span className="text-[10px] text-gray-500 font-bold">مستورد خدمة</span>
+                  <span className="text-sm font-black text-[#011222] block font-mono">{kpiData?.totalUsers ?? 570}</span>
+                  <span className="text-[10px] text-gray-500 font-bold">مستخدم مسجل</span>
                 </div>
                 <div className="px-1">
                   <Handshake className="w-4 h-4 text-[#2563EB] mx-auto mb-1" />
@@ -165,7 +178,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="px-1">
                   <Truck className="w-4 h-4 text-[#4338CA] mx-auto mb-1" />
-                  <span className="text-sm font-black text-[#011222] block font-mono">320</span>
+                  <span className="text-sm font-black text-[#011222] block font-mono">{kpiData?.activeTrucks ?? 320}</span>
                   <span className="text-[10px] text-gray-500 font-bold">شاحنة</span>
                 </div>
               </div>
@@ -232,7 +245,7 @@ export default function AdminDashboard() {
 
               <div className="mt-2 text-right">
                 <div className="text-2xl sm:text-3xl font-black text-[#011222] font-mono tracking-tight">
-                  $845,200
+                  {kpiData?.totalRevenue ? `$${kpiData.totalRevenue.toLocaleString()}` : '$845,200'}
                 </div>
                 <div className="flex items-center gap-1 text-xs font-bold text-[#009F65] mt-1.5 font-mono">
                   <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />

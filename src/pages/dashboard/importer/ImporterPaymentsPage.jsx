@@ -342,10 +342,10 @@ export default function ImporterPaymentsPage() {
           <div className="bg-[#F4FDF7] rounded-[24px] p-6 border border-emerald-100/80 shadow-xs text-center flex flex-col items-center justify-center min-h-[160px]">
             <span className="text-xs font-bold text-gray-500 mb-1.5 block">وفورات الفترة التجريبية وعروض الأسعار</span>
             <span className="text-3xl lg:text-4xl font-black text-[#009F65] leading-none font-sans block">
-              $1,200
+              {isDemoSarah ? '$1,200' : '$0'}
             </span>
             <span className="text-xs font-bold text-[#009F65] mt-3 block">
-              عمولة 0% مفعلة حالياً
+              {isDemoSarah ? 'عمولة 0% مفعلة حالياً' : (trialInfo.isActive ? 'الفترة التجريبية مفعلة (عمولة 0%)' : 'عمولة 2.5%')}
             </span>
           </div>
 

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import Sidebar from '../../../components/dashboard/Sidebar'
 import DashboardFooterBar from '../../../components/common/DashboardFooterBar'
 import { useNotifications } from '../../../context/NotificationContext'
+import { useAuth } from '../../../context/AuthContext'
+import authService from '../../../services/authService'
 import api from '../../../services/api'
 import {
   Search,
@@ -20,48 +22,6 @@ import {
   X,
 } from 'lucide-react'
 
-const initialStatCards = [
-  {
-    title: 'اجمالي الطلبات',
-    count: '41',
-    changeText: '9 عن الأسبوع الماضي',
-    changeColor: '#D97706',
-    bg: '#FEFBF3',
-    iconBg: '#FDE68A',
-    iconColor: '#D97706',
-    icon: Globe,
-  },
-  {
-    title: 'عروض مقدمة',
-    count: '8',
-    changeText: '3 عن الأسبوع الماضي',
-    changeColor: '#0284C7',
-    bg: '#F5FBFE',
-    iconBg: '#BAE6FD',
-    iconColor: '#0284C7',
-    icon: Check,
-  },
-  {
-    title: 'طلبات جديدة',
-    count: '24',
-    changeText: '6 عن الأسبوع الماضي',
-    changeColor: '#7C3AED',
-    bg: '#FAF8FE',
-    iconBg: '#DDD6FE',
-    iconColor: '#7C3AED',
-    icon: Send,
-  },
-  {
-    title: 'عروض قيد المراجعة',
-    count: '12',
-    changeText: '2 عن الأسبوع الماضي',
-    changeColor: '#059669',
-    bg: '#F4FCF9',
-    iconBg: '#A7F3D0',
-    iconColor: '#059669',
-    icon: Clock,
-  },
-]
 
 const initialRfqItems = [
   {
@@ -133,17 +93,21 @@ const initialRfqItems = [
 
 export default function RFQPage() {
   const { openNotifications } = useNotifications()
+  const { user: authUser } = useAuth() || {}
+  const currentUser = authUser || authService.getCurrentUser()
+  const isDemoProvider = currentUser?.email === 'provider@meynaa.com'
+
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('الكل')
   const [typeFilter, setTypeFilter] = useState('الكل')
 
-  const [rfqList, setRfqList] = useState(initialRfqItems)
+  const [rfqList, setRfqList] = useState(() => (isDemoProvider ? initialRfqItems : []))
   const [showQuoteModal, setShowQuoteModal] = useState(false)
   const [toastMessage, setToastMessage] = useState(null)
 
   // Quote Form State
   const [quoteForm, setQuoteForm] = useState({
-    rfqId: initialRfqItems[0].id,
+    rfqId: (isDemoProvider && initialRfqItems.length > 0) ? initialRfqItems[0].id : '',
     freightCost: '5200',
     customsCost: '650',
     truckingCost: '800',
@@ -157,6 +121,7 @@ export default function RFQPage() {
 
   // قراءة طلبات عروض الأسعار المفتوحة من قاعدة بيانات Supabase
   useEffect(() => {
+    if (isDemoProvider) return
     api.get('/rfq/market')
       .then((res) => {
         if (Array.isArray(res?.data) && res.data.length > 0) {
@@ -175,11 +140,61 @@ export default function RFQPage() {
             statusColor: r.status === 'OPEN' ? '#0284C7' : '#EA580C',
           }))
           setRfqList(mapped)
-          setQuoteForm((prev) => ({ ...prev, rfqId: mapped[0].id }))
+          if (mapped.length > 0) {
+            setQuoteForm((prev) => ({ ...prev, rfqId: mapped[0].id }))
+          }
+        } else {
+          setRfqList([])
         }
       })
-      .catch(() => {})
-  }, [])
+      .catch(() => {
+        setRfqList([])
+      })
+  }, [isDemoProvider])
+
+  // Stat cards dynamically calculated from active rfqList or demo counts
+  const statCards = [
+    {
+      title: 'اجمالي الطلبات',
+      count: isDemoProvider ? '41' : String(rfqList.length),
+      changeText: isDemoProvider ? '9 عن الأسبوع الماضي' : 'طلبات متاحة بالسوق',
+      changeColor: '#D97706',
+      bg: '#FEFBF3',
+      iconBg: '#FDE68A',
+      iconColor: '#D97706',
+      icon: Globe,
+    },
+    {
+      title: 'عروض مقدمة',
+      count: isDemoProvider ? '8' : String(rfqList.filter((r) => r.status === 'تم تقديم عرض').length),
+      changeText: isDemoProvider ? '3 عن الأسبوع الماضي' : 'عروضك التنافسية',
+      changeColor: '#0284C7',
+      bg: '#F5FBFE',
+      iconBg: '#BAE6FD',
+      iconColor: '#0284C7',
+      icon: Check,
+    },
+    {
+      title: 'طلبات جديدة',
+      count: isDemoProvider ? '24' : String(rfqList.filter((r) => r.status === 'جديد' || r.status === 'OPEN').length),
+      changeText: isDemoProvider ? '6 عن الأسبوع الماضي' : 'متاحة للتقديم الفوري',
+      changeColor: '#7C3AED',
+      bg: '#FAF8FE',
+      iconBg: '#DDD6FE',
+      iconColor: '#7C3AED',
+      icon: Send,
+    },
+    {
+      title: 'عروض قيد المراجعة',
+      count: isDemoProvider ? '12' : String(rfqList.filter((r) => r.status === 'قيد المراجعة').length),
+      changeText: isDemoProvider ? '2 عن الأسبوع الماضي' : 'بانتظار قبول المستورد',
+      changeColor: '#059669',
+      bg: '#F4FCF9',
+      iconBg: '#A7F3D0',
+      iconColor: '#059669',
+      icon: Clock,
+    },
+  ]
 
   // Selected RFQ object
   const currentRfq = rfqList.find((r) => r.id === quoteForm.rfqId) || rfqList[0]
@@ -312,7 +327,7 @@ export default function RFQPage() {
 
         {/* 4 Stat Cards Row - matching XD Rectangle 188, 191, 192, 193 */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {initialStatCards.map((card, i) => {
+          {statCards.map((card, i) => {
             const Icon = card.icon
             return (
               <div
@@ -419,114 +434,126 @@ export default function RFQPage() {
             <h3 className="text-base font-black text-[#011222]">طلبات عروض الأسعار</h3>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-right border-collapse">
-              <thead>
-                <tr className="bg-[#F0F3F8] border-b border-[#E2E8F0] text-[#011222] font-black text-xs">
-                  <th className="py-4 px-6 text-right">رقم الطلب</th>
-                  <th className="py-4 px-6 text-right">اسم المستورد</th>
-                  <th className="py-4 px-6 text-right">نوع الشحنة</th>
-                  <th className="py-4 px-6 text-right">المنشأ</th>
-                  <th className="py-4 px-6 text-right">الوجهة</th>
-                  <th className="py-4 px-6 text-right">الوزن</th>
-                  <th className="py-4 px-6 text-right">تاريخ الطلب</th>
-                  <th className="py-4 px-6 text-right">الميزانية التقديرية</th>
-                  <th className="py-4 px-6 text-right">حالة الطلب</th>
-                  <th className="py-4 px-6 text-center">الإجراء</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 text-xs font-medium">
-                {filtered.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
-                    {/* رقم الطلب */}
-                    <td className="py-4 px-6">
-                      <span className="font-bold text-[#0284C7] bg-[#DCF0FE] px-3.5 py-1.5 rounded-lg font-mono inline-block">
-                        {item.id}
-                      </span>
-                    </td>
-
-                    {/* اسم المستورد */}
-                    <td className="py-4 px-6 font-bold text-[#011222]">
-                      {item.importer}
-                    </td>
-
-                    {/* نوع الشحنة */}
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-1.5 text-[#011222]">
-                        {item.type === 'بحري' ? (
-                          <Ship className="w-3.5 h-3.5 text-[#0284C7]" />
-                        ) : (
-                          <Plane className="w-3.5 h-3.5 text-[#FB8731]" />
-                        )}
-                        <span className="font-bold">{item.type}</span>
-                      </div>
-                    </td>
-
-                    {/* المنشأ */}
-                    <td className="py-4 px-6 text-[#64748B]">
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-[#94A3B8]" />
-                        <span>{item.origin}</span>
-                      </div>
-                    </td>
-
-                    {/* الوجهة */}
-                    <td className="py-4 px-6 text-[#64748B]">
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-[#FB8731]" />
-                        <span>{item.destination}</span>
-                      </div>
-                    </td>
-
-                    {/* الوزن */}
-                    <td className="py-4 px-6 font-bold text-[#011222]">
-                      {item.weight}
-                    </td>
-
-                    {/* تاريخ الطلب */}
-                    <td className="py-4 px-6 font-mono text-[#64748B]">
-                      {item.date}
-                    </td>
-
-                    {/* الميزانية التقديرية */}
-                    <td className="py-4 px-6 font-black text-[#011222]">
-                      {item.budget}
-                    </td>
-
-                    {/* حالة الطلب */}
-                    <td className="py-4 px-6">
-                      <span
-                        className="inline-flex items-center px-4 py-1.5 rounded-lg text-xs font-bold"
-                        style={{
-                          backgroundColor: item.statusBg,
-                          color: item.statusColor,
-                        }}
-                      >
-                        {item.status}
-                      </span>
-                    </td>
-
-                    {/* الإجراء: زر تقديم عرض السعر */}
-                    <td className="py-4 px-6 text-center">
-                      {item.status === 'تم تقديم عرض' ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#009F65] bg-[#E6F9F0] px-3 py-1 rounded-lg">
-                          <Check className="w-3.5 h-3.5" />
-                          <span>تم إرسال العرض</span>
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => handleOpenQuoteModal(item.id)}
-                          className="px-3.5 py-1.5 rounded-xl bg-[#FFF3EA] hover:bg-[#FB8731] text-[#FB8731] hover:text-white border border-[#FB8731]/30 text-xs font-bold transition-all cursor-pointer shadow-2xs"
-                        >
-                          تقديم عرض
-                        </button>
-                      )}
-                    </td>
+          {filtered.length === 0 ? (
+            <div className="text-center py-14 flex flex-col items-center justify-center bg-gray-50/50 rounded-2xl m-6 border border-dashed border-gray-200">
+              <div className="w-14 h-14 rounded-2xl bg-[#FFF7ED] text-[#FB8731] flex items-center justify-center mb-3 shadow-xs">
+                <ClipboardList className="w-7 h-7" />
+              </div>
+              <p className="text-sm font-black text-[#011222]">لا توجد طلبات عروض أسعار متاحة حالياً</p>
+              <p className="text-xs text-gray-500 mt-1.5 max-w-md leading-relaxed px-4">
+                حسابك مفعل وجاهز. ستظهر هنا كافة طلبات عروض الأسعار (RFQ) فور نشرها من قبل المستوردين في السوق اللوجستي لتتمكن من تقديم عروضك مباشرة.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-right border-collapse">
+                <thead>
+                  <tr className="bg-[#F0F3F8] border-b border-[#E2E8F0] text-[#011222] font-black text-xs">
+                    <th className="py-4 px-6 text-right">رقم الطلب</th>
+                    <th className="py-4 px-6 text-right">اسم المستورد</th>
+                    <th className="py-4 px-6 text-right">نوع الشحنة</th>
+                    <th className="py-4 px-6 text-right">المنشأ</th>
+                    <th className="py-4 px-6 text-right">الوجهة</th>
+                    <th className="py-4 px-6 text-right">الوزن</th>
+                    <th className="py-4 px-6 text-right">تاريخ الطلب</th>
+                    <th className="py-4 px-6 text-right">الميزانية التقديرية</th>
+                    <th className="py-4 px-6 text-right">حالة الطلب</th>
+                    <th className="py-4 px-6 text-center">الإجراء</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-xs font-medium">
+                  {filtered.map((item) => (
+                    <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
+                      {/* رقم الطلب */}
+                      <td className="py-4 px-6">
+                        <span className="font-bold text-[#0284C7] bg-[#DCF0FE] px-3.5 py-1.5 rounded-lg font-mono inline-block">
+                          {item.id}
+                        </span>
+                      </td>
+
+                      {/* اسم المستورد */}
+                      <td className="py-4 px-6 font-bold text-[#011222]">
+                        {item.importer}
+                      </td>
+
+                      {/* نوع الشحنة */}
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-1.5 text-[#011222]">
+                          {item.type === 'بحري' ? (
+                            <Ship className="w-3.5 h-3.5 text-[#0284C7]" />
+                          ) : (
+                            <Plane className="w-3.5 h-3.5 text-[#FB8731]" />
+                          )}
+                          <span className="font-bold">{item.type}</span>
+                        </div>
+                      </td>
+
+                      {/* المنشأ */}
+                      <td className="py-4 px-6 text-[#64748B]">
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-[#94A3B8]" />
+                          <span>{item.origin}</span>
+                        </div>
+                      </td>
+
+                      {/* الوجهة */}
+                      <td className="py-4 px-6 text-[#64748B]">
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-[#FB8731]" />
+                          <span>{item.destination}</span>
+                        </div>
+                      </td>
+
+                      {/* الوزن */}
+                      <td className="py-4 px-6 font-bold text-[#011222]">
+                        {item.weight}
+                      </td>
+
+                      {/* تاريخ الطلب */}
+                      <td className="py-4 px-6 font-mono text-[#64748B]">
+                        {item.date}
+                      </td>
+
+                      {/* الميزانية التقديرية */}
+                      <td className="py-4 px-6 font-black text-[#011222]">
+                        {item.budget}
+                      </td>
+
+                      {/* حالة الطلب */}
+                      <td className="py-4 px-6">
+                        <span
+                          className="inline-flex items-center px-4 py-1.5 rounded-lg text-xs font-bold"
+                          style={{
+                            backgroundColor: item.statusBg,
+                            color: item.statusColor,
+                          }}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+
+                      {/* الإجراء: زر تقديم عرض السعر */}
+                      <td className="py-4 px-6 text-center">
+                        {item.status === 'تم تقديم عرض' ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#009F65] bg-[#E6F9F0] px-3 py-1 rounded-lg">
+                            <Check className="w-3.5 h-3.5" />
+                            <span>تم إرسال العرض</span>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleOpenQuoteModal(item.id)}
+                            className="px-3.5 py-1.5 rounded-xl bg-[#FFF3EA] hover:bg-[#FB8731] text-[#FB8731] hover:text-white border border-[#FB8731]/30 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                          >
+                            تقديم عرض
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         {/* Floating Moving Footer Bar */}

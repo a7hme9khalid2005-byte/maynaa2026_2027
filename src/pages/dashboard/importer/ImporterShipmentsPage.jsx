@@ -410,11 +410,28 @@ export default function ImporterShipmentsPage() {
                 </tbody>
               </table>
 
-              {filtered.length === 0 && (
+              {activeShipmentsList.length === 0 ? (
+                <div className="text-center py-14 flex flex-col items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-[#FFF7ED] text-[#FB8731] flex items-center justify-center mb-3 shadow-xs">
+                    <Ship className="w-7 h-7" />
+                  </div>
+                  <p className="text-sm font-black text-[#011222]">لا توجد شحنات نشطة حالياً</p>
+                  <p className="text-xs text-gray-500 mt-1 max-w-sm leading-relaxed">
+                    ابدأ بإنشاء طلب عرض سعر (RFQ) لاستقبال عروض الشحن من مزودي الخدمة المعتمدين وتفعيل أول شحنة لك.
+                  </p>
+                  <Link
+                    to="/importer/rfq"
+                    className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-[#FB8731] text-white text-xs font-bold rounded-xl hover:bg-[#e07220] transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>إنشاء طلب تسعير (RFQ) جديد</span>
+                  </Link>
+                </div>
+              ) : filtered.length === 0 ? (
                 <div className="text-center py-10 text-gray-400 text-xs font-bold">
                   لا توجد شحنات تطابق بحثك حالياً.
                 </div>
-              )}
+              ) : null}
             </div>
           </section>
         )}

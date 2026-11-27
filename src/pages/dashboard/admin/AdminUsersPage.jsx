@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import AdminSidebar from '../../../components/dashboard/AdminSidebar'
 import AdminHeader from '../../../components/dashboard/AdminHeader'
-import { useAuth } from '../../../context/AuthContext'
-import authService from '../../../services/authService'
 import api from '../../../services/api'
 import {
   Search,
@@ -230,12 +228,8 @@ ${divider}
 }
 
 export default function AdminUsersPage() {
-  const { user: authUser } = useAuth() || {}
-  const currentUser = authUser || authService.getCurrentUser()
-  const isDemoAdmin = currentUser?.email === 'admin@meynaa.com'
-
-  const [usersList, setUsersList] = useState(() => (isDemoAdmin ? initialUsers : []))
-  const [selectedUser, setSelectedUser] = useState(() => (isDemoAdmin ? initialUsers[0] : null))
+  const [usersList, setUsersList] = useState(initialUsers)
+  const [selectedUser, setSelectedUser] = useState(initialUsers[0])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('جميع التصنيفات')
   const [filterAccountType, setFilterAccountType] = useState('جميع الحسابات')
@@ -250,7 +244,7 @@ export default function AdminUsersPage() {
           const mapped = res.data.map((u, idx) => ({
             id: u.id,
             numId: idx + 1,
-            name: u.fullName || 'مستخدم المنصة',
+            name: u.fullName || u.companyProfile?.companyNameAr || 'مستخدم المنصة',
             email: u.email,
             phone: u.phone || '+966 50 000 0000',
             passwordPlain: '••••••••',
@@ -258,28 +252,28 @@ export default function AdminUsersPage() {
             role: u.role === 'IMPORTER' ? 'مستورد' : u.role === 'PROVIDER' ? 'مزود خدمة' : 'مدير النظام',
             category: u.role === 'IMPORTER' ? 'مستورد' : u.role === 'PROVIDER' ? 'مزود خدمة' : 'إدارة',
             accountType: u.companyProfile?.companyNameAr ? 'شركة' : 'مستخدم فردي',
-            status: u.status === 'ACTIVE' ? 'مفعل' : u.status === 'BLOCKED' ? 'مرفوض' : 'معلق',
-            statusBg: u.status === 'ACTIVE' ? '#E6F9F0' : u.status === 'BLOCKED' ? '#FEEAEA' : '#FEF3C7',
-            statusColor: u.status === 'ACTIVE' ? '#009F65' : u.status === 'BLOCKED' ? '#DC2626' : '#D97706',
+            status: u.status === 'ACTIVE' ? 'مفعل' : u.status === 'BLOCKED' ? 'مرفوض' : 'قيد المراجعة',
+            statusBg: u.status === 'ACTIVE' ? '#E6F9F0' : u.status === 'BLOCKED' ? '#FEEAEA' : '#FFF4E8',
+            statusColor: u.status === 'ACTIVE' ? '#009F65' : u.status === 'BLOCKED' ? '#DC2626' : '#EA580C',
             avatar: (u.fullName || 'مي').slice(0, 2),
             regDate: new Date(u.createdAt || Date.now()).toLocaleDateString('ar-SA'),
-            crNumber: u.companyProfile?.crNumber || '1010000000',
+            crNumber: u.companyProfile?.crNumber || 'CR:1010000000',
             permissions: u.role === 'SUPER_ADMIN' ? ['Super Admin'] : ['Customs Officer'],
             documents: [
               { name: 'السجل التجاري', status: 'مقبول', statusColor: '#009F65' },
               { name: 'الشهادة الضريبية', status: 'مقبول', statusColor: '#009F65' },
-              { name: 'وثيقة العنوان الوطني', status: 'مقبول', statusColor: '#009F65' }
+              { name: 'ترخيص هيئة النقل والجمارك', status: u.companyProfile?.isVerified ? 'مقبول' : 'قيد التدقيق', statusColor: u.companyProfile?.isVerified ? '#009F65' : '#EA580C' }
             ],
             authorizedPerson: u.fullName,
-            supervisor: 'الإدارة العامة',
+            supervisor: 'أحمد المدير العام',
             address: u.companyProfile?.companyNameAr ? `${u.companyProfile.companyNameAr} - المملكة العربية السعودية` : 'المملكة العربية السعودية'
           }))
           setUsersList(mapped)
-          setSelectedUser((prev) => prev || mapped[0])
+          setSelectedUser(mapped[0])
         }
       })
       .catch(() => {})
-  }, [isDemoAdmin])
+  }, [])
 
   // Modal 1: Rejection Modal State
   const [showRejectModal, setShowRejectModal] = useState(false)
@@ -435,10 +429,10 @@ export default function AdminUsersPage() {
               <div>
                 <span className="text-xs font-bold text-[#6B21A8] block mb-1">المرفوضة</span>
                 <div className="text-2xl sm:text-3xl font-black text-[#011222] font-mono leading-none">
-                  {isDemoAdmin ? 32 : usersList.filter((u) => u.status === 'مرفوض').length}
+                  {usersList.filter((u) => u.status === 'مرفوض').length}
                 </div>
                 <span className="text-xs font-bold text-[#7C3AED] font-mono block mt-2">
-                  {isDemoAdmin ? '6%' : 'حسابات مرفوضة'}
+                  {Math.round((usersList.filter((u) => u.status === 'مرفوض').length / (usersList.length || 1)) * 100)}%
                 </span>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-white/90 border border-[#DDD6FE] text-[#7C3AED] flex items-center justify-center shrink-0 shadow-xs">
@@ -451,10 +445,10 @@ export default function AdminUsersPage() {
               <div>
                 <span className="text-xs font-bold text-[#065F46] block mb-1">قيد المراجعة</span>
                 <div className="text-2xl sm:text-3xl font-black text-[#011222] font-mono leading-none">
-                  {isDemoAdmin ? 48 : usersList.filter((u) => u.status === 'معلق' || u.status === 'قيد المراجعة').length}
+                  {usersList.filter((u) => u.status === 'قيد المراجعة' || u.status === 'معلق').length}
                 </div>
                 <span className="text-xs font-bold text-[#009F65] font-mono block mt-2">
-                  {isDemoAdmin ? '8%' : 'بانتظار التدقيق'}
+                  {Math.round((usersList.filter((u) => u.status === 'قيد المراجعة' || u.status === 'معلق').length / (usersList.length || 1)) * 100)}%
                 </span>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-white/90 border border-[#A7F3D0] text-[#009F65] flex items-center justify-center shrink-0 shadow-xs">
@@ -467,10 +461,10 @@ export default function AdminUsersPage() {
               <div>
                 <span className="text-xs font-bold text-[#0369A1] block mb-1">المستخدمين النشطين</span>
                 <div className="text-2xl sm:text-3xl font-black text-[#011222] font-mono leading-none">
-                  {isDemoAdmin ? '1,250' : usersList.filter((u) => u.status === 'مفعل' || u.status === 'نشط').length}
+                  {usersList.filter((u) => u.status === 'مفعل' || u.status === 'نشط').length}
                 </div>
                 <span className="text-xs font-bold text-[#009F65] font-mono block mt-2">
-                  {isDemoAdmin ? '14%' : 'حسابات نشطة'}
+                  {Math.round((usersList.filter((u) => u.status === 'مفعل' || u.status === 'نشط').length / (usersList.length || 1)) * 100)}%
                 </span>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-white/90 border border-[#BAE6FD] text-[#0284C7] flex items-center justify-center shrink-0 shadow-xs">
@@ -483,10 +477,10 @@ export default function AdminUsersPage() {
               <div>
                 <span className="text-xs font-bold text-[#9A3412] block mb-1">الشركات المفعلة</span>
                 <div className="text-2xl sm:text-3xl font-black text-[#011222] font-mono leading-none">
-                  {isDemoAdmin ? 250 : usersList.filter((u) => u.accountType === 'شركة').length}
+                  {usersList.filter((u) => u.accountType === 'شركة').length}
                 </div>
                 <span className="text-xs font-bold text-[#009F65] font-mono block mt-2">
-                  {isDemoAdmin ? '12%' : 'منشآت معتمدة'}
+                  {Math.round((usersList.filter((u) => u.accountType === 'شركة').length / (usersList.length || 1)) * 100)}%
                 </span>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-white/90 border border-[#FED7AA] text-[#FB8731] flex items-center justify-center shrink-0 shadow-xs">

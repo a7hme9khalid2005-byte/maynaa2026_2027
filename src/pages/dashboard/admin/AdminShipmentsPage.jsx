@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import AdminSidebar from '../../../components/dashboard/AdminSidebar'
 import AdminHeader from '../../../components/dashboard/AdminHeader'
-import { useAuth } from '../../../context/AuthContext'
-import authService from '../../../services/authService'
 import api from '../../../services/api'
 import {
   Search,
@@ -159,13 +157,9 @@ const initialAuditTrail = [
 ]
 
 export default function AdminShipmentsPage() {
-  const { user: authUser } = useAuth() || {}
-  const currentUser = authUser || authService.getCurrentUser()
-  const isDemoAdmin = currentUser?.email === 'admin@meynaa.com'
-
-  const [shipments, setShipments] = useState(() => (isDemoAdmin ? initialShipments : []))
+  const [shipments, setShipments] = useState(initialShipments)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedShipment, setSelectedShipment] = useState(() => (isDemoAdmin ? initialShipments[6] : null))
+  const [selectedShipment, setSelectedShipment] = useState(initialShipments[6])
   const [auditTrail, setAuditTrail] = useState(initialAuditTrail)
 
   // قراءة كافة شحنات المنصة من قاعدة البيانات مباشرة
@@ -175,22 +169,23 @@ export default function AdminShipmentsPage() {
         if (Array.isArray(res?.data) && res.data.length > 0) {
           const mapped = res.data.map((s) => ({
             id: s.trackingNumber || s.id,
+            dbId: s.id,
             clientName: s.importer?.fullName || 'مستورد معتمد',
-            transportType: s.transportType === 'SEA' ? 'بحري' : s.transportType === 'AIR' ? 'جوي' : 'بري',
-            route: `${s.originAddress || 'المصدر'} - ${s.destinationAddress || 'الوجهة'}`,
-            status: s.status === 'DELIVERED' ? 'مكتملة' : s.status === 'CUSTOMS' ? 'في الجمارك' : 'قيد الشحن',
-            statusBg: s.status === 'DELIVERED' ? '#E6F9F0' : '#FFF4E8',
-            statusColor: s.status === 'DELIVERED' ? '#009F65' : '#FB8731',
+            transportType: s.sector === 'SEA_FREIGHT' ? 'بحري' : s.sector === 'AIR_FREIGHT' ? 'جوي' : 'بري',
+            route: `${s.originName || 'المصدر'} - ${s.destName || 'الوجهة'}`,
+            status: s.status === 'DELIVERED' ? 'مكتملة' : s.status === 'CUSTOMS_HOLD' ? 'في التخليص الجمركي' : s.status === 'DELAYED' ? 'متأخرة' : 'تحت المراجعة',
+            statusBg: s.status === 'DELIVERED' ? '#E6F9F0' : s.status === 'CUSTOMS_HOLD' ? '#E0F2FE' : s.status === 'DELAYED' ? '#FEEAEA' : '#FFF4E8',
+            statusColor: s.status === 'DELIVERED' ? '#009F65' : s.status === 'CUSTOMS_HOLD' ? '#0284C7' : s.status === 'DELAYED' ? '#DC2626' : '#EA580C',
             createdAt: new Date(s.createdAt || Date.now()).toLocaleDateString('ar-SA'),
             carrier: s.provider?.fullName || 'شركة الشحن المعتمدة',
             notes: `شحنة مسجلة برقم تتبع ${s.trackingNumber || s.id}`
           }))
           setShipments(mapped)
-          setSelectedShipment((prev) => prev || mapped[0])
+          setSelectedShipment(mapped[0])
         }
       })
       .catch(() => {})
-  }, [isDemoAdmin])
+  }, [])
 
   // Manual Control Form State
   const [newStatus, setNewStatus] = useState('مكتملة')
@@ -645,7 +640,7 @@ export default function AdminShipmentsPage() {
               <div>
                 <span className="text-xs font-bold text-[#6D28D9] block mb-1">إجمالي الشحنات</span>
                 <div className="text-2xl sm:text-3xl font-black text-[#011222] font-mono leading-none">
-                  {isDemoAdmin ? '1,250' : shipments.length}
+                  {shipments.length}
                 </div>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-white/90 border border-[#DDD6FE] text-[#7C3AED] flex items-center justify-center shrink-0 shadow-xs">
@@ -658,7 +653,7 @@ export default function AdminShipmentsPage() {
               <div>
                 <span className="text-xs font-bold text-[#0369A1] block mb-1">شحنة متأخرة</span>
                 <div className="text-2xl sm:text-3xl font-black text-[#011222] font-mono leading-none">
-                  {isDemoAdmin ? 27 : shipments.filter((s) => s.status === 'متأخرة').length}
+                  {shipments.filter((s) => s.status === 'متأخرة').length}
                 </div>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-white/90 border border-[#BAE6FD] text-[#0284C7] flex items-center justify-center shrink-0 shadow-xs">
@@ -671,7 +666,7 @@ export default function AdminShipmentsPage() {
               <div>
                 <span className="text-xs font-bold text-[#047857] block mb-1">شحنة متكاملة</span>
                 <div className="text-2xl sm:text-3xl font-black text-[#011222] font-mono leading-none">
-                  {isDemoAdmin ? 842 : shipments.filter((s) => s.status === 'مكتملة').length}
+                  {shipments.filter((s) => s.status === 'مكتملة').length}
                 </div>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-white/90 border border-[#A7F3D0] text-[#009F65] flex items-center justify-center shrink-0 shadow-xs">
@@ -684,7 +679,7 @@ export default function AdminShipmentsPage() {
               <div>
                 <span className="text-xs font-bold text-[#C2410C] block mb-1">شحنة قيد التنفيذ</span>
                 <div className="text-2xl sm:text-3xl font-black text-[#011222] font-mono leading-none">
-                  {isDemoAdmin ? 36 : shipments.filter((s) => s.status !== 'مكتملة' && s.status !== 'متأخرة').length}
+                  {shipments.filter((s) => s.status !== 'مكتملة' && s.status !== 'متأخرة').length}
                 </div>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-white/90 border border-[#FED7AA] text-[#FB8731] flex items-center justify-center shrink-0 shadow-xs">

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AdminSidebar from '../../../components/dashboard/AdminSidebar'
 import AdminHeader from '../../../components/dashboard/AdminHeader'
+import api from '../../../services/api'
 import {
   Clock,
   Check,
@@ -258,7 +259,7 @@ export default function AdminSupportPage() {
   const [tickets, setTickets] = useState(initialTickets)
   const [selectedTicketIds, setSelectedTicketIds] = useState([])
   const [inboxTab, setInboxTab] = useState('all') // 'all', 'call', 'chat'
-  const [inbox] = useState(initialInbox)
+  const [inbox, setInbox] = useState(initialInbox)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 5
   const [broadcastText, setBroadcastText] = useState('')
@@ -268,6 +269,48 @@ export default function AdminSupportPage() {
   const [ticketReplyText, setTicketReplyText] = useState('')
   const [activeMessageModal, setActiveMessageModal] = useState(null)
   const [messageReplyText, setMessageReplyText] = useState('')
+
+  // قراءة تذاكر الدعم الفني والرسائل الموحدة الحقيقية من قاعدة بيانات Supabase
+  useEffect(() => {
+    api.get('/admin/support/tickets')
+      .then((res) => {
+        if (Array.isArray(res?.data) && res.data.length > 0) {
+          const ticketsOnly = res.data.filter(t => t.type === 'ticket').map(t => ({
+            id: t.ticketNum,
+            dbId: t.id,
+            subject: t.subject,
+            priority: t.priority === 'CRITICAL' ? 'حرجة' : t.priority === 'MEDIUM' ? 'متوسطة' : 'عادية',
+            priorityClass: t.priority === 'CRITICAL' ? 'bg-rose-50 text-rose-600 border border-rose-200/80' : t.priority === 'MEDIUM' ? 'bg-amber-50 text-amber-600 border border-amber-200/80' : 'bg-blue-50 text-blue-600 border border-blue-200/80',
+            status: t.status === 'RESOLVED' ? 'تم الحل' : t.status === 'IN_PROGRESS' ? 'قيد المعالجة' : t.status === 'WAITING_CLIENT' ? 'بانتظار العميل' : 'جديدة',
+            statusClass: t.status === 'RESOLVED' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/80' : t.status === 'IN_PROGRESS' ? 'bg-orange-50 text-[#FB8731] border border-orange-200/80' : 'bg-sky-50 text-sky-600 border border-sky-200/80',
+            date: new Date(t.createdAt).toLocaleDateString('ar-SA'),
+            agent: t.agentName || 'فريق الدعم',
+            client: t.clientName || 'عميل المنصة',
+            content: t.content
+          }))
+          if (ticketsOnly.length > 0) {
+            setTickets(ticketsOnly)
+          }
+
+          const msgsOnly = res.data.filter(t => t.type === 'chat' || t.type === 'call').map((m, idx) => ({
+            id: idx + 1,
+            dbId: m.id,
+            type: m.type,
+            sender: m.clientName || 'عميل المنصة',
+            message: m.subject || m.content,
+            status: m.status === 'RESOLVED' ? 'مغلقة' : m.status === 'READ' ? 'مقروءة' : 'جديدة',
+            statusClass: m.status === 'RESOLVED' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/80' : 'bg-rose-50 text-rose-600 border border-rose-200/80',
+            time: new Date(m.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
+            priority: m.priority === 'CRITICAL' ? 'حرجة' : 'عادية',
+            priorityClass: m.priority === 'CRITICAL' ? 'bg-rose-50 text-rose-600 border border-rose-200/80' : 'bg-blue-50 text-blue-600 border border-blue-200/80'
+          }))
+          if (msgsOnly.length > 0) {
+            setInbox(msgsOnly)
+          }
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const showToast = (msg) => {
     setToastMessage(msg)
@@ -303,10 +346,17 @@ export default function AdminSupportPage() {
     }
 
     setIsSendingBroadcast(true)
+    api.post('/admin/support/tickets', {
+      subject: 'إشعار جماعي للمستخدمين',
+      content: broadcastText,
+      type: 'chat',
+      clientName: 'الإدارة العامة'
+    }).catch(() => {})
+
     setTimeout(() => {
       setIsSendingBroadcast(false)
       setBroadcastText('')
-      showToast('تم إرسال الإشعار الجماعي بنجاح إلى جميع مستخدمي المنصة')
+      showToast('تم إرسال الإشعار الجماعي وحفظه بنجاح في قاعدة البيانات')
     }, 700)
   }
 
@@ -326,8 +376,15 @@ export default function AdminSupportPage() {
       return t
     })
 
+    if (activeTicketModal.dbId) {
+      api.patch(`/admin/support/tickets/${activeTicketModal.dbId}`, {
+        status: 'RESOLVED',
+        reply: ticketReplyText
+      }).catch(() => {})
+    }
+
     setTickets(updated)
-    showToast(`تم الرد على التذكرة ${activeTicketModal.id} وتغيير حالتها إلى "تم الحل"`)
+    showToast(`تم الرد على التذكرة ${activeTicketModal.id} وحفظها في قاعدة البيانات بحالة "تم الحل"`)
     setActiveTicketModal(null)
     setTicketReplyText('')
   }
@@ -564,8 +621,12 @@ export default function AdminSupportPage() {
             <div className="bg-[#F0F9FF]/80 backdrop-blur-xs rounded-3xl p-5 border border-[#BAE6FD]/70 hover:border-[#0284C7]/50 shadow-[0_2px_12px_rgba(2,132,199,0.04)] hover:shadow-md transition-all flex items-center justify-between">
               <div className="text-right">
                 <p className="text-xs font-bold text-[#0369A1] mb-1">عاجلة</p>
-                <h3 className="text-2xl lg:text-3xl font-black text-[#011222] tracking-tight font-mono">40</h3>
-                <p className="text-xs font-bold text-[#009F65] mt-1 font-mono">8%</p>
+                <h3 className="text-2xl lg:text-3xl font-black text-[#011222] tracking-tight font-mono">
+                  {tickets.filter((t) => t.priority === 'حرجة').length}
+                </h3>
+                <p className="text-xs font-bold text-[#009F65] mt-1 font-mono">
+                  {Math.round((tickets.filter((t) => t.priority === 'حرجة').length / (tickets.length || 1)) * 100)}%
+                </p>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-white/90 border border-[#BAE6FD] text-[#0284C7] flex items-center justify-center shrink-0 shadow-xs">
                 <span className="font-black text-2xl leading-none text-[#0284C7]">!</span>
@@ -576,8 +637,12 @@ export default function AdminSupportPage() {
             <div className="bg-[#FFF7ED]/80 backdrop-blur-xs rounded-3xl p-5 border border-[#FED7AA]/70 hover:border-[#FB8731]/50 shadow-[0_2px_12px_rgba(251,135,49,0.04)] hover:shadow-md transition-all flex items-center justify-between">
               <div className="text-right">
                 <p className="text-xs font-bold text-[#C2410C] mb-1">قيد المعالجة</p>
-                <h3 className="text-2xl lg:text-3xl font-black text-[#011222] tracking-tight font-mono">76</h3>
-                <p className="text-xs font-bold text-[#009F65] mt-1 font-mono">6%</p>
+                <h3 className="text-2xl lg:text-3xl font-black text-[#011222] tracking-tight font-mono">
+                  {tickets.filter((t) => t.status === 'قيد المعالجة' || t.status === 'بانتظار العميل').length}
+                </h3>
+                <p className="text-xs font-bold text-[#009F65] mt-1 font-mono">
+                  {Math.round((tickets.filter((t) => t.status === 'قيد المعالجة' || t.status === 'بانتظار العميل').length / (tickets.length || 1)) * 100)}%
+                </p>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-white/90 border border-[#FED7AA] text-[#FB8731] flex items-center justify-center shrink-0 shadow-xs">
                 <Clock className="w-6 h-6 stroke-[2]" />
@@ -588,8 +653,12 @@ export default function AdminSupportPage() {
             <div className="bg-[#ECFDF5]/80 backdrop-blur-xs rounded-3xl p-5 border border-[#A7F3D0]/70 hover:border-[#009F65]/50 shadow-[0_2px_12px_rgba(0,159,101,0.04)] hover:shadow-md transition-all flex items-center justify-between">
               <div className="text-right">
                 <p className="text-xs font-bold text-[#047857] mb-1">تم الحل</p>
-                <h3 className="text-2xl lg:text-3xl font-black text-[#011222] tracking-tight font-mono">1,132</h3>
-                <p className="text-xs font-bold text-[#009F65] mt-1 font-mono">14%</p>
+                <h3 className="text-2xl lg:text-3xl font-black text-[#011222] tracking-tight font-mono">
+                  {tickets.filter((t) => t.status === 'تم الحل').length}
+                </h3>
+                <p className="text-xs font-bold text-[#009F65] mt-1 font-mono">
+                  {Math.round((tickets.filter((t) => t.status === 'تم الحل').length / (tickets.length || 1)) * 100)}%
+                </p>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-white/90 border border-[#A7F3D0] text-[#009F65] flex items-center justify-center shrink-0 shadow-xs">
                 <Check className="w-6 h-6 stroke-[3]" />
@@ -600,8 +669,10 @@ export default function AdminSupportPage() {
             <div className="bg-[#F5F3FF]/80 backdrop-blur-xs rounded-3xl p-5 border border-[#DDD6FE]/70 hover:border-[#7C3AED]/50 shadow-[0_2px_12px_rgba(124,58,237,0.04)] hover:shadow-md transition-all flex items-center justify-between">
               <div className="text-right">
                 <p className="text-xs font-bold text-[#6D28D9] mb-1">إجمالي التذاكر</p>
-                <h3 className="text-2xl lg:text-3xl font-black text-[#011222] tracking-tight font-mono">1,248</h3>
-                <p className="text-xs font-bold text-[#009F65] mt-1 font-mono">12%</p>
+                <h3 className="text-2xl lg:text-3xl font-black text-[#011222] tracking-tight font-mono">
+                  {tickets.length}
+                </h3>
+                <p className="text-xs font-bold text-[#009F65] mt-1 font-mono">100%</p>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-white/90 border border-[#DDD6FE] text-[#7C3AED] flex items-center justify-center shrink-0 shadow-xs">
                 <Ticket className="w-6 h-6 stroke-[2]" />

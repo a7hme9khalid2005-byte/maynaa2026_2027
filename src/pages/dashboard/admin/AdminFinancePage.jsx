@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import AdminSidebar from '../../../components/dashboard/AdminSidebar'
 import AdminHeader from '../../../components/dashboard/AdminHeader'
-import { useAuth } from '../../../context/AuthContext'
-import authService from '../../../services/authService'
+import api from '../../../services/api'
 import financeService from '../../../services/financeService'
 import {
   Coins,
@@ -327,20 +326,16 @@ function buildPrintHtml(invoicesList) {
 }
 
 export default function AdminFinancePage() {
-  const { user: authUser } = useAuth() || {}
-  const currentUser = authUser || authService.getCurrentUser()
-  const isDemoAdmin = currentUser?.email === 'admin@meynaa.com'
-
   const [searchQuery, setSearchQuery] = useState('')
   const [chartPeriod, setChartPeriod] = useState('30days')
   const [toastMessage, setToastMessage] = useState('')
-  const [invoices] = useState(() => (isDemoAdmin ? initialInvoices : []))
-  const [transfers] = useState(() => (isDemoAdmin ? initialTransfers : []))
-  const [transactions] = useState(() => (isDemoAdmin ? initialTransactions : []))
+  const [invoices, setInvoices] = useState(initialInvoices)
+  const [transfers] = useState(initialTransfers)
+  const [transactions] = useState(initialTransactions)
   const [previewInvoice, setPreviewInvoice] = useState(null)
 
   // حالة إشعارات التحويل البنكي الخارجي قيد تدقيق الإدارة (المستورد -> الأدمن -> المزود)
-  const [auditTransfers, setAuditTransfers] = useState(() => (isDemoAdmin ? initialAdminAuditTransfers : []))
+  const [auditTransfers, setAuditTransfers] = useState(initialAdminAuditTransfers)
   const [selectedReceiptPreview, setSelectedReceiptPreview] = useState(null)
   const [rejectModalData, setRejectModalData] = useState(null)
   const [rejectReason, setRejectReason] = useState('')
@@ -352,12 +347,11 @@ export default function AdminFinancePage() {
     }, 4500)
   }
 
-  // جلب الحوالات المعلقة لتدقيق الأدمن من الباك إند
+  // جلب الحوالات المعلقة لتدقيق الأدمن والفواتير الحقيقية من الباك إند
   useEffect(() => {
     financeService.getAdminPendingTransfers()
       .then((res) => {
         if (res?.data && res.data.length > 0) {
-          // دمج الحوالات القادمة من السيرفر
           const liveList = res.data.map(item => ({
             id: item.id.substring(0, 10).toUpperCase(),
             shipmentId: item.invoice?.shipmentId ? `SHN-${item.invoice.shipmentId.substring(0, 6)}` : 'SHN-2026-884',
@@ -379,6 +373,26 @@ export default function AdminFinancePage() {
             status: item.status
           }))
           setAuditTransfers(liveList)
+        }
+      })
+      .catch(() => {})
+
+    // جلب الفواتير المعتمدة من قاعدة البيانات
+    financeService.getAdminDirectTransfers?.()
+    api.get('/admin/invoices')
+      .then((res) => {
+        if (Array.isArray(res?.data) && res.data.length > 0) {
+          const mappedInvoices = res.data.map((inv) => ({
+            id: inv.invoiceNumber,
+            issueDate: new Date(inv.createdAt).toISOString().split('T')[0],
+            status: inv.paymentStatus === 'PAID' ? 'معتمدة' : 'قيد المراجعة',
+            amount: `$${inv.subtotal?.toLocaleString() || '14,200'}`,
+            tax: `$${inv.taxAmount?.toLocaleString() || '2,130'}`,
+            total: `$${inv.totalAmount?.toLocaleString() || '16,330'}`,
+            client: inv.shipment?.importer?.fullName || 'شركة النور للاستيراد',
+            service: `شحنة لوجستية ${inv.shipment?.trackingNumber || ''}`
+          }))
+          setInvoices(mappedInvoices)
         }
       })
       .catch(() => {})

@@ -23,6 +23,11 @@ export class AdminService {
     const totalCommissions = invoices.reduce((sum, i) => sum + i.commissionAmount, 0)
     const totalTradingVolume = totalRevenue
 
+    const recentActivities = await prisma.activityLog.findMany({
+      take: 6,
+      orderBy: { createdAt: 'desc' },
+    })
+
     return {
       totalUsers,
       totalImporters,
@@ -38,6 +43,7 @@ export class AdminService {
       totalRevenue,
       totalCommissions,
       totalTradingVolume,
+      recentActivities,
     }
   }
 
@@ -83,8 +89,17 @@ export class AdminService {
     })
   }
 
-  // تحديث سياسات المنصة والشروط في قاعدة البيانات
-  static async updatePolicy(params: { termsText?: string; privacyText?: string }) {
+  // تحديث سياسات المنصة والشروط وبوابات الربط في قاعدة البيانات
+  static async updatePolicy(params: {
+    termsText?: string
+    privacyText?: string
+    emailGatewayEnabled?: boolean
+    emailGatewayAddress?: string
+    smsGatewayEnabled?: boolean
+    smsGatewaySender?: string
+    webhookEnabled?: boolean
+    webhookUrl?: string
+  }) {
     return prisma.platformConfig.upsert({
       where: { id: 'global-config' },
       update: params,
@@ -164,6 +179,71 @@ export class AdminService {
   static async deleteUser(userId: string) {
     return prisma.user.delete({
       where: { id: userId },
+    })
+  }
+
+  // 7. تذاكر الدعم والرسائل الموحدة
+  static async getSupportTickets(type?: string) {
+    const where: any = {}
+    if (type && type !== 'all') {
+      where.type = type
+    }
+    return prisma.supportTicket.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    })
+  }
+
+  static async updateSupportTicket(id: string, data: { status?: string; reply?: string; agentName?: string }) {
+    return prisma.supportTicket.update({
+      where: { id },
+      data,
+    })
+  }
+
+  static async createSupportTicket(data: {
+    ticketNum?: string
+    subject: string
+    priority?: string
+    status?: string
+    clientName?: string
+    agentName?: string
+    content: string
+    type?: string
+  }) {
+    const ticketCount = await prisma.supportTicket.count()
+    const ticketNum = data.ticketNum || `#${1001 + ticketCount}`
+    return prisma.supportTicket.create({
+      data: {
+        ticketNum,
+        subject: data.subject,
+        priority: data.priority || 'NORMAL',
+        status: data.status || 'NEW',
+        clientName: data.clientName || 'عميل المنصة',
+        agentName: data.agentName || 'فريق الدعم',
+        content: data.content,
+        type: data.type || 'ticket',
+      },
+    })
+  }
+
+  // 8. سجل الأنشطة الحية
+  static async getActivityLogs(limit = 10) {
+    return prisma.activityLog.findMany({
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+    })
+  }
+
+  // 9. الفواتير المعتمدة للإدارة
+  static async getInvoices(limit = 20) {
+    return prisma.invoice.findMany({
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        shipment: true,
+        transfers: true,
+      },
     })
   }
 }

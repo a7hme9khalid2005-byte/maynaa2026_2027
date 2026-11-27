@@ -13,4 +13,9 @@ router.get('/config', auth_middleware_js_1.authenticate, admin_controller_js_1.A
 router.put('/commissions', auth_middleware_js_1.authenticate, (0, role_middleware_js_1.requireRole)('SUPER_ADMIN', 'ADMIN'), admin_controller_js_1.AdminController.updateCommissions);
 router.put('/policy', auth_middleware_js_1.authenticate, (0, role_middleware_js_1.requireRole)('SUPER_ADMIN', 'ADMIN'), admin_controller_js_1.AdminController.updatePolicy);
 router.get('/search', auth_middleware_js_1.authenticate, admin_controller_js_1.AdminController.search);
+router.get('/support/tickets', auth_middleware_js_1.authenticate, (0, role_middleware_js_1.requireRole)('SUPER_ADMIN', 'ADMIN'), admin_controller_js_1.AdminController.getSupportTickets);
+router.patch('/support/tickets/:id', auth_middleware_js_1.authenticate, (0, role_middleware_js_1.requireRole)('SUPER_ADMIN', 'ADMIN'), admin_controller_js_1.AdminController.updateSupportTicket);
+router.post('/support/tickets', auth_middleware_js_1.authenticate, (0, role_middleware_js_1.requireRole)('SUPER_ADMIN', 'ADMIN'), admin_controller_js_1.AdminController.createSupportTicket);
+router.get('/activities', auth_middleware_js_1.authenticate, (0, role_middleware_js_1.requireRole)('SUPER_ADMIN', 'ADMIN'), admin_controller_js_1.AdminController.getActivityLogs);
+router.get('/invoices', auth_middleware_js_1.authenticate, (0, role_middleware_js_1.requireRole)('SUPER_ADMIN', 'ADMIN'), admin_controller_js_1.AdminController.getInvoices);
 exports.default = router;

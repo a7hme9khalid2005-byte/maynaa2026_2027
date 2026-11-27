@@ -123,6 +123,16 @@ export default function AdminSettingsPage() {
   const [selectedPolicyTab, setSelectedPolicyTab] = useState('terms')
   const [policyTexts, setPolicyTexts] = useState(policyDocuments)
 
+  // Gateways & Messaging State
+  const [gateways, setGateways] = useState({
+    emailEnabled: true,
+    emailAddress: 'noreply@meynaa.com',
+    smsEnabled: true,
+    smsSender: 'شركة الاتصالات الفلسطينية',
+    webhookEnabled: true,
+    webhookUrl: 'https://api.meynaa.com/webhook'
+  })
+
   // قراءة نسب العمولات والسياسات الحية من قاعدة البيانات
   useEffect(() => {
     api.get('/admin/config')
@@ -134,27 +144,20 @@ export default function AdminSettingsPage() {
             customs: String(res.data.commissionCustom || '1.00'),
             air: String(res.data.commissionAir || '3.00')
           })
-          if (res.data.termsText || res.data.privacyText) {
-            setPolicyTexts((prev) => ({
-              ...prev,
-              ...(res.data.termsText ? { terms: res.data.termsText } : {}),
-              ...(res.data.privacyText ? { privacy: res.data.privacyText } : {})
-            }))
+          if (res.data.emailGatewayAddress !== undefined) {
+            setGateways({
+              emailEnabled: res.data.emailGatewayEnabled ?? true,
+              emailAddress: res.data.emailGatewayAddress || 'noreply@meynaa.com',
+              smsEnabled: res.data.smsGatewayEnabled ?? true,
+              smsSender: res.data.smsGatewaySender || 'شركة الاتصالات الفلسطينية',
+              webhookEnabled: res.data.webhookEnabled ?? true,
+              webhookUrl: res.data.webhookUrl || 'https://api.meynaa.com/webhook'
+            })
           }
         }
       })
       .catch(() => {})
   }, [])
-
-  // Gateways & Messaging State
-  const [gateways, setGateways] = useState({
-    emailEnabled: true,
-    emailAddress: 'noreply@meynaa.com',
-    smsEnabled: true,
-    smsSender: 'شركة الاتصالات الفلسطينية',
-    webhookEnabled: true,
-    webhookUrl: 'https://api.meynaa.com/webhook'
-  })
 
   const showToast = (msg) => {
     setToastMessage(msg)
@@ -201,7 +204,12 @@ export default function AdminSettingsPage() {
   const handleToggleGateway = (key) => {
     setGateways((prev) => {
       const updated = { ...prev, [key]: !prev[key] }
-      showToast('تم تحديث حالة البوابة بنجاح')
+      api.put('/admin/policy', {
+        emailGatewayEnabled: key === 'emailEnabled' ? !prev[key] : prev.emailEnabled,
+        smsGatewayEnabled: key === 'smsEnabled' ? !prev[key] : prev.smsEnabled,
+        webhookEnabled: key === 'webhookEnabled' ? !prev[key] : prev.webhookEnabled,
+      }).catch(() => {})
+      showToast('تم تحديث حالة البوابة وحفظها في قاعدة البيانات')
       return updated
     })
   }

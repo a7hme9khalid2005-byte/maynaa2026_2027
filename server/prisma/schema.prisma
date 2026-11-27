@@ -72,6 +72,7 @@ model Truck {
   plateNumber     String    @unique // أ ب ج 1234
   truckType       String    @default("HEAVY_TRUCK") // REEFER (مبردة), FLATBED (سطحة), CONTAINER_CARRIER
   status          String    @default("AVAILABLE") // AVAILABLE, ON_DUTY, MAINTENANCE, EMERGENCY
+  currentCity     String?   @default("الرياض")
   providerId      String
   provider        User      @relation("ProviderTrucks", fields: [providerId], references: [id])
   driverId        String?
@@ -232,15 +233,21 @@ model Document {
 
 // 8. إعدادات المنصة وسياسات العمولات (Platform Settings & Commissions)
 model PlatformConfig {
-  id               String   @id @default("global-config")
-  commissionSea    Float    @default(2.50) // 2.50%
-  commissionAir    Float    @default(3.00) // 3.00%
-  commissionLand   Float    @default(1.50) // 1.50%
-  commissionCustom Float    @default(1.00) // 1.00%
-  vatPercentage    Float    @default(15.00)// 15.00%
-  termsText        String?
-  privacyText      String?
-  updatedAt        DateTime @updatedAt
+  id                  String   @id @default("global-config")
+  commissionSea       Float    @default(2.50) // 2.50%
+  commissionAir       Float    @default(3.00) // 3.00%
+  commissionLand      Float    @default(1.50) // 1.50%
+  commissionCustom    Float    @default(1.00) // 1.00%
+  vatPercentage       Float    @default(15.00)// 15.00%
+  termsText           String?
+  privacyText         String?
+  emailGatewayEnabled Boolean  @default(true)
+  emailGatewayAddress String?  @default("noreply@meynaa.com")
+  smsGatewayEnabled   Boolean  @default(true)
+  smsGatewaySender    String?  @default("شركة الاتصالات الفلسطينية")
+  webhookEnabled      Boolean  @default(true)
+  webhookUrl          String?  @default("https://api.meynaa.com/webhook")
+  updatedAt           DateTime @updatedAt
 }
 
 // 9. سجل التدقيق والنشاطات (Audit Logs)
@@ -252,4 +259,20 @@ model ActivityLog {
   details   String?
   ipAddress String?
   createdAt DateTime @default(now())
+}
+
+// 10. تذاكر الدعم الفني والرسائل الموحدة (Support Tickets & Help Desk)
+model SupportTicket {
+  id         String   @id @default(uuid())
+  ticketNum  String   @unique // #1001
+  subject    String
+  priority   String   @default("NORMAL") // CRITICAL, MEDIUM, NORMAL, URGENT
+  status     String   @default("NEW")    // NEW, RESOLVED, IN_PROGRESS, WAITING_CLIENT
+  clientName String
+  agentName  String?
+  content    String
+  reply      String?
+  type       String   @default("ticket") // ticket, chat, call
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }

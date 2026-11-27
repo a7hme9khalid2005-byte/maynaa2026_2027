@@ -13,5 +13,10 @@ router.get('/config', authenticate, AdminController.getConfig)
 router.put('/commissions', authenticate, requireRole('SUPER_ADMIN', 'ADMIN'), AdminController.updateCommissions)
 router.put('/policy', authenticate, requireRole('SUPER_ADMIN', 'ADMIN'), AdminController.updatePolicy)
 router.get('/search', authenticate, AdminController.search)
+router.get('/support/tickets', authenticate, requireRole('SUPER_ADMIN', 'ADMIN'), AdminController.getSupportTickets)
+router.patch('/support/tickets/:id', authenticate, requireRole('SUPER_ADMIN', 'ADMIN'), AdminController.updateSupportTicket)
+router.post('/support/tickets', authenticate, requireRole('SUPER_ADMIN', 'ADMIN'), AdminController.createSupportTicket)
+router.get('/activities', authenticate, requireRole('SUPER_ADMIN', 'ADMIN'), AdminController.getActivityLogs)
+router.get('/invoices', authenticate, requireRole('SUPER_ADMIN', 'ADMIN'), AdminController.getInvoices)
 
 export default router

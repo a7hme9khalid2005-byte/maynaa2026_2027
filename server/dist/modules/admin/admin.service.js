@@ -22,6 +22,10 @@ class AdminService {
         const totalRevenue = invoices.reduce((sum, i) => sum + i.totalAmount, 0);
         const totalCommissions = invoices.reduce((sum, i) => sum + i.commissionAmount, 0);
         const totalTradingVolume = totalRevenue;
+        const recentActivities = await prisma_js_1.prisma.activityLog.findMany({
+            take: 6,
+            orderBy: { createdAt: 'desc' },
+        });
         return {
             totalUsers,
             totalImporters,
@@ -37,6 +41,7 @@ class AdminService {
             totalRevenue,
             totalCommissions,
             totalTradingVolume,
+            recentActivities,
         };
     }
     // 2. إعدادات ونسب العمولات للمنصة
@@ -74,7 +79,7 @@ class AdminService {
             },
         });
     }
-    // تحديث سياسات المنصة والشروط في قاعدة البيانات
+    // تحديث سياسات المنصة والشروط وبوابات الربط في قاعدة البيانات
     static async updatePolicy(params) {
         return prisma_js_1.prisma.platformConfig.upsert({
             where: { id: 'global-config' },
@@ -150,6 +155,57 @@ class AdminService {
     static async deleteUser(userId) {
         return prisma_js_1.prisma.user.delete({
             where: { id: userId },
+        });
+    }
+    // 7. تذاكر الدعم والرسائل الموحدة
+    static async getSupportTickets(type) {
+        const where = {};
+        if (type && type !== 'all') {
+            where.type = type;
+        }
+        return prisma_js_1.prisma.supportTicket.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+    static async updateSupportTicket(id, data) {
+        return prisma_js_1.prisma.supportTicket.update({
+            where: { id },
+            data,
+        });
+    }
+    static async createSupportTicket(data) {
+        const ticketCount = await prisma_js_1.prisma.supportTicket.count();
+        const ticketNum = data.ticketNum || `#${1001 + ticketCount}`;
+        return prisma_js_1.prisma.supportTicket.create({
+            data: {
+                ticketNum,
+                subject: data.subject,
+                priority: data.priority || 'NORMAL',
+                status: data.status || 'NEW',
+                clientName: data.clientName || 'عميل المنصة',
+                agentName: data.agentName || 'فريق الدعم',
+                content: data.content,
+                type: data.type || 'ticket',
+            },
+        });
+    }
+    // 8. سجل الأنشطة الحية
+    static async getActivityLogs(limit = 10) {
+        return prisma_js_1.prisma.activityLog.findMany({
+            take: limit,
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+    // 9. الفواتير المعتمدة للإدارة
+    static async getInvoices(limit = 20) {
+        return prisma_js_1.prisma.invoice.findMany({
+            take: limit,
+            orderBy: { createdAt: 'desc' },
+            include: {
+                shipment: true,
+                transfers: true,
+            },
         });
     }
 }

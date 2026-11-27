@@ -121,10 +121,26 @@ export default function AdminDashboard() {
   const currentRevenueData = timeFilter === 'أسبوعي' ? revenueDataWeekly : revenueDataMonthly
   const peakRevenueBadge = timeFilter === 'أسبوعي' ? '$250K' : '$845K'
 
-  const filteredActivities = recentActivities.filter((act) => {
+  const activeActivities = (kpiData?.recentActivities && kpiData.recentActivities.length > 0)
+    ? kpiData.recentActivities.map((act, idx) => ({
+        id: act.id,
+        title: act.details || act.action,
+        time: act.createdAt ? new Date(act.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : 'الآن',
+        dotColor: idx % 3 === 0 ? '#0284C7' : idx % 3 === 1 ? '#009F65' : '#FB8731'
+      }))
+    : recentActivities
+
+  const filteredActivities = activeActivities.filter((act) => {
     if (!searchTerm.trim()) return true
     return act.title.toLowerCase().includes(searchTerm.toLowerCase().trim())
   })
+
+  const sumTransports = (kpiData?.seaShipments || 0) + (kpiData?.landShipments || 0) + (kpiData?.airShipments || 0)
+  const displayShipmentTypeData = sumTransports > 0 ? [
+    { name: 'بري', value: Math.round(((kpiData.landShipments || 0) / sumTransports) * 100), count: (kpiData.landShipments || 0).toLocaleString(), color: '#FB8731' },
+    { name: 'بحري', value: Math.round(((kpiData.seaShipments || 0) / sumTransports) * 100), count: (kpiData.seaShipments || 0).toLocaleString(), color: '#011222' },
+    { name: 'جوي', value: Math.round(((kpiData.airShipments || 0) / sumTransports) * 100), count: (kpiData.airShipments || 0).toLocaleString(), color: '#0284C7' },
+  ] : shipmentTypeData
 
   return (
     <div className="flex min-h-screen bg-[#F4F6FA] relative overflow-hidden font-almarai" dir="rtl">
@@ -469,7 +485,7 @@ export default function AdminDashboard() {
                     عدد المستوردين المسجلين
                   </span>
                   <span className="text-xl font-black text-[#FB8731] font-mono">
-                    570
+                    {kpiData?.totalImporters ?? 570}
                   </span>
                 </div>
 
@@ -480,7 +496,7 @@ export default function AdminDashboard() {
                     عدد مزودي الخدمة والناقلين المعتمدين
                   </span>
                   <span className="text-xl font-black text-[#0284C7] font-mono">
-                    680
+                    {kpiData?.totalProviders ?? 680}
                   </span>
                 </div>
 
@@ -491,7 +507,7 @@ export default function AdminDashboard() {
                     عدد مزودي الخدمة والناقلين المسجلين
                   </span>
                   <span className="text-xl font-black text-purple-600 font-mono">
-                    320
+                    {kpiData?.activeTrucks ?? 320}
                   </span>
                 </div>
               </div>
@@ -514,13 +530,13 @@ export default function AdminDashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={shipmentTypeData}
+                        data={displayShipmentTypeData}
                         dataKey="value"
                         innerRadius={42}
                         outerRadius={60}
                         paddingAngle={3}
                       >
-                        {shipmentTypeData.map((entry) => (
+                        {displayShipmentTypeData.map((entry) => (
                           <Cell key={entry.name} fill={entry.color} />
                         ))}
                       </Pie>
@@ -530,7 +546,7 @@ export default function AdminDashboard() {
                   {/* Center of Donut */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
                     <span className="text-lg font-black text-[#011222] font-mono leading-none">
-                      8,750
+                      {kpiData?.totalShipments ? kpiData.totalShipments.toLocaleString() : '8,750'}
                     </span>
                     <span className="text-[9px] text-gray-400 font-bold mt-0.5">
                       إجمالي الشحنات
@@ -545,7 +561,9 @@ export default function AdminDashboard() {
                       <Ship className="w-4 h-4 text-[#011222]" />
                       <span className="text-[#011222]">بحري</span>
                     </div>
-                    <span className="font-mono text-sm font-black text-[#011222]">32%</span>
+                    <span className="font-mono text-sm font-black text-[#011222]">
+                      {displayShipmentTypeData.find(d => d.name === 'بحري')?.value ?? 32}%
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between text-xs font-bold">
@@ -553,7 +571,9 @@ export default function AdminDashboard() {
                       <Truck className="w-4 h-4 text-[#FB8731]" />
                       <span className="text-[#FB8731]">بري</span>
                     </div>
-                    <span className="font-mono text-sm font-black text-[#FB8731]">38%</span>
+                    <span className="font-mono text-sm font-black text-[#FB8731]">
+                      {displayShipmentTypeData.find(d => d.name === 'بري')?.value ?? 38}%
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between text-xs font-bold">
@@ -561,7 +581,9 @@ export default function AdminDashboard() {
                       <Plane className="w-4 h-4 text-[#0284C7]" />
                       <span className="text-[#0284C7]">جوي</span>
                     </div>
-                    <span className="font-mono text-sm font-black text-[#0284C7]">30%</span>
+                    <span className="font-mono text-sm font-black text-[#0284C7]">
+                      {displayShipmentTypeData.find(d => d.name === 'جوي')?.value ?? 30}%
+                    </span>
                   </div>
                 </div>
               </div>

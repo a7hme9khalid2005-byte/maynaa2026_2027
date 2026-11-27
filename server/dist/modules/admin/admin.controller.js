@@ -39,9 +39,18 @@ class AdminController {
     }
     static async updatePolicy(req, res) {
         try {
-            const { termsText, privacyText } = req.body;
-            const updated = await admin_service_js_1.AdminService.updatePolicy({ termsText, privacyText });
-            return (0, response_util_js_1.sendSuccess)(res, updated, 'تم تحديث نصوص السياسات والشروط بنجاح');
+            const { termsText, privacyText, emailGatewayEnabled, emailGatewayAddress, smsGatewayEnabled, smsGatewaySender, webhookEnabled, webhookUrl, } = req.body;
+            const updated = await admin_service_js_1.AdminService.updatePolicy({
+                termsText,
+                privacyText,
+                emailGatewayEnabled,
+                emailGatewayAddress,
+                smsGatewayEnabled,
+                smsGatewaySender,
+                webhookEnabled,
+                webhookUrl,
+            });
+            return (0, response_util_js_1.sendSuccess)(res, updated, 'تم تحديث نصوص السياسات والشروط وبوابات الربط بنجاح');
         }
         catch (err) {
             return (0, response_util_js_1.sendError)(res, err.message);
@@ -82,6 +91,56 @@ class AdminController {
             const { id } = req.params;
             await admin_service_js_1.AdminService.deleteUser(id);
             return (0, response_util_js_1.sendSuccess)(res, null, 'تم حذف المستخدم من قاعدة البيانات بنجاح');
+        }
+        catch (err) {
+            return (0, response_util_js_1.sendError)(res, err.message);
+        }
+    }
+    static async getSupportTickets(req, res) {
+        try {
+            const { type } = req.query;
+            const tickets = await admin_service_js_1.AdminService.getSupportTickets(type);
+            return (0, response_util_js_1.sendSuccess)(res, tickets, 'تم استرجاع تذاكر الدعم والرسائل الموحدة');
+        }
+        catch (err) {
+            return (0, response_util_js_1.sendError)(res, err.message);
+        }
+    }
+    static async updateSupportTicket(req, res) {
+        try {
+            const { id } = req.params;
+            const { status, reply, agentName } = req.body;
+            const updated = await admin_service_js_1.AdminService.updateSupportTicket(id, { status, reply, agentName });
+            return (0, response_util_js_1.sendSuccess)(res, updated, 'تم تحديث تذكرة الدعم الفني بنجاح');
+        }
+        catch (err) {
+            return (0, response_util_js_1.sendError)(res, err.message);
+        }
+    }
+    static async createSupportTicket(req, res) {
+        try {
+            const created = await admin_service_js_1.AdminService.createSupportTicket(req.body);
+            return (0, response_util_js_1.sendSuccess)(res, created, 'تم إنشاء تذكرة دعم أو رسالة جديدة بنجاح', 201);
+        }
+        catch (err) {
+            return (0, response_util_js_1.sendError)(res, err.message);
+        }
+    }
+    static async getActivityLogs(req, res) {
+        try {
+            const limit = req.query.limit ? parseInt(req.query.limit) : 10;
+            const logs = await admin_service_js_1.AdminService.getActivityLogs(limit);
+            return (0, response_util_js_1.sendSuccess)(res, logs, 'تم استرجاع سجل الأنشطة الحية');
+        }
+        catch (err) {
+            return (0, response_util_js_1.sendError)(res, err.message);
+        }
+    }
+    static async getInvoices(req, res) {
+        try {
+            const limit = req.query.limit ? parseInt(req.query.limit) : 20;
+            const invoices = await admin_service_js_1.AdminService.getInvoices(limit);
+            return (0, response_util_js_1.sendSuccess)(res, invoices, 'تم استرجاع الفواتير المعتمدة');
         }
         catch (err) {
             return (0, response_util_js_1.sendError)(res, err.message);
